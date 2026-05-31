@@ -56,7 +56,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		var block uint8 = 0
 
 		switch ev.Event.Code {
 		case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
@@ -72,13 +71,15 @@ func main() {
 		// 	}
 		case input.KEY_KP7:
 			{
+				read.BlockInput(1)
 				if ev.Event.Value == 1 {
-					playLevel(1)
-					block = 1
+					println("7")
+					go playLevel(0)
 				}
+				continue
 			}
 		}
-		read.BlockInput(block)
+		read.BlockInput(0)
 	}
 }
 func moveMouse(x, y int32) {
@@ -96,7 +97,7 @@ func moveMouse(x, y int32) {
 	if err != nil {
 		log.Printf("Error sending sync: %v", err)
 	}
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 }
 
 func playLevel(i int) {
@@ -106,47 +107,26 @@ func playLevel(i int) {
 
 	moveMouse(596, 223)
 	click()
+	moveMouse(0, 0)
 	moveMouse(levelPos[level][0], levelPos[level][1])
-	// moveMouse(596, 223)
-	// time.Sleep(150 * time.Millisecond)
-	// send.Send(IMan.WireEvent{
-	// 	// Type: input,
-	// 	Value: 1,
-	// 	Code:  input.BTN_LEFT,
-	// })
-	// send.Send(IMan.WireEvent{})
-	// time.Sleep(150 * time.Millisecond)
-	// send.Send(IMan.WireEvent{
-	// 	Type: input.EV_REL,
-	// 	// Type:  input.EV_ABS,
-	// 	Value: -9,
-	// 	Code:  input.REL_X,
-	// })
-	// send.Send(IMan.WireEvent{})
-	// send.Send(IMan.WireEvent{
-	// 	// Type: input,
-	// 	Value: 0,
-	// 	Code:  input.BTN_LEFT,
-	// })
-	// send.Send(IMan.WireEvent{})
-	// time.Sleep(150 * time.Millisecond)
+	click()
 }
 func click() {
 	// 1. Mouse Down
 	send.Send(IMan.WireEvent{
-		Type:  input.EV_KEY, // Explicitly state this is a key/button event
+		Type:  input.EV_KEY,
 		Code:  input.BTN_LEFT,
-		Value: 1, // 1 = Press
+		Value: 1,
 	})
-	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
-	time.Sleep(150 * time.Millisecond)
+	send.Send(IMan.WireEvent{})
+	time.Sleep(1 * time.Second)
 
 	// 2. Mouse Up
 	send.Send(IMan.WireEvent{
 		Type:  input.EV_KEY,
 		Code:  input.BTN_LEFT,
-		Value: 0, // 0 = Release
+		Value: 0,
 	})
-	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
-	time.Sleep(150 * time.Millisecond)
+	send.Send(IMan.WireEvent{})
+	time.Sleep(1 * time.Second)
 }
