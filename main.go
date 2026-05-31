@@ -9,7 +9,8 @@ import (
 	"github.com/rsa17826/input-manager/IMan"
 )
 
-var im IMan.ManagerConnection
+var read *IMan.ManagerConnection
+var send *IMan.ManagerConnection
 
 func main() {
 	level := 0
@@ -20,7 +21,10 @@ func main() {
 		{547, 808},
 		{935, 814},
 	}
-	im, err := IMan.Connect(IMan.ModeListen, IMan.ModeInjection)
+	var err error
+	read, err = IMan.Connect(IMan.ModeListen)
+	send, err = IMan.Connect(IMan.ModeInjection)
+	// read, err := IMan.Connect(IMan.ModeListen, IMan.ModeInjection)
 	print(levelPos[level])
 	if err != nil {
 		panic(err)
@@ -48,7 +52,7 @@ func main() {
 	// 	}
 	// }()
 	for {
-		ev, err := im.ReadNext()
+		ev, err := read.ReadNext()
 		if err != nil {
 			panic(err)
 		}
@@ -68,41 +72,42 @@ func main() {
 }
 func playLevel(i int) {
 	// playbtn
-	err := im.Send(IMan.WireEvent{
-		Type:  input.EV_REL,
-		Code:  input.REL_X,
-		Value: -9,
-	})
+	err := send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 15})
+	if err != nil {
+		log.Printf("Error sending movement: %v", err)
+	}
+	err = send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: 15})
+
 	if err != nil {
 		log.Printf("Error sending movement: %v", err)
 	}
 
-	err = im.Send(IMan.WireEvent{})
+	err = send.Send(IMan.WireEvent{})
 	if err != nil {
 		log.Printf("Error sending sync: %v", err)
 	}
 	// moveMouse(596, 223)
 	// time.Sleep(10 * time.Millisecond)
-	// im.Send(IMan.WireEvent{
+	// read.Send(IMan.WireEvent{
 	// 	// Type: input,
 	// 	Value: 1,
 	// 	Code:  input.BTN_LEFT,
 	// })
-	// im.Send(IMan.WireEvent{})
+	// read.Send(IMan.WireEvent{})
 	// time.Sleep(10 * time.Millisecond)
-	// im.Send(IMan.WireEvent{
+	// read.Send(IMan.WireEvent{
 	// 	Type: input.EV_REL,
 	// 	// Type:  input.EV_ABS,
 	// 	Value: -9,
 	// 	Code:  input.REL_X,
 	// })
-	// im.Send(IMan.WireEvent{})
-	// im.Send(IMan.WireEvent{
+	// read.Send(IMan.WireEvent{})
+	// read.Send(IMan.WireEvent{
 	// 	// Type: input,
 	// 	Value: 0,
 	// 	Code:  input.BTN_LEFT,
 	// })
-	// im.Send(IMan.WireEvent{})
+	// read.Send(IMan.WireEvent{})
 	// time.Sleep(10 * time.Millisecond)
 }
 func moveMouse(x, y int) {
