@@ -21,7 +21,7 @@ func main() {
 		{935, 814},
 	}
 	var err error
-	read, err = IMan.Connect(IMan.ModeListen)
+	read, err = IMan.Connect(IMan.ModeBlocking)
 	send, err = IMan.Connect(IMan.ModeInjection)
 	// read, err := IMan.Connect(IMan.ModeListen, IMan.ModeInjection)
 	print(levelPos[level])
@@ -55,18 +55,23 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		var block uint8 = 0
 
 		switch ev.Event.Code {
 		case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
 			{
-				print("start")
+				println("start")
 			}
 		case input.BTN_RIGHT:
 			{
-				print("asdasd")
-				playLevel(1)
+				if ev.Event.Value == 1 {
+					println("asdasd")
+					playLevel(1)
+					block = 1
+				}
 			}
 		}
+		read.BlockInput(block)
 	}
 }
 func playLevel(i int) {
