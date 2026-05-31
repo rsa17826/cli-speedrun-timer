@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os/exec"
+	"time"
 
 	"github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
@@ -72,20 +71,8 @@ func main() {
 }
 func playLevel(i int) {
 	// playbtn
-	err := send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 15})
-	if err != nil {
-		log.Printf("Error sending movement: %v", err)
-	}
-	err = send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: 15})
-
-	if err != nil {
-		log.Printf("Error sending movement: %v", err)
-	}
-
-	err = send.Send(IMan.WireEvent{})
-	if err != nil {
-		log.Printf("Error sending sync: %v", err)
-	}
+	moveMouse(596, 223)
+	click()
 	// moveMouse(596, 223)
 	// time.Sleep(10 * time.Millisecond)
 	// read.Send(IMan.WireEvent{
@@ -110,11 +97,42 @@ func playLevel(i int) {
 	// read.Send(IMan.WireEvent{})
 	// time.Sleep(10 * time.Millisecond)
 }
-func moveMouse(x, y int) {
-	cmd := exec.Command("hyprctl", "dispatch", fmt.Sprintf("hl.dsp.cursor.move({ x = %d, y = %d})", x, y))
-	output, err := cmd.CombinedOutput()
+func click() {
+	read.Send(IMan.WireEvent{
+		// Type: input,
+		Value: 1,
+		Code:  input.BTN_LEFT,
+	})
+	read.Send(IMan.WireEvent{})
+	time.Sleep(10 * time.Millisecond)
+	read.Send(IMan.WireEvent{
+		Type: input.EV_REL,
+		// Type:  input.EV_ABS,
+		Value: -9,
+		Code:  input.REL_X,
+	})
+	read.Send(IMan.WireEvent{})
+	read.Send(IMan.WireEvent{
+		// Type: input,
+		Value: 0,
+		Code:  input.BTN_LEFT,
+	})
+	read.Send(IMan.WireEvent{})
+	time.Sleep(10 * time.Millisecond)
+}
+func moveMouse(x, y int32) {
+	err := send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: x})
 	if err != nil {
-		log.Fatalf("Command failed with error: %v\nOutput: %s", err, string(output))
+		log.Printf("Error sending movement: %v", err)
 	}
-	fmt.Printf("Success:\n%s\n", string(output))
+	err = send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: y})
+
+	if err != nil {
+		log.Printf("Error sending movement: %v", err)
+	}
+
+	err = send.Send(IMan.WireEvent{})
+	if err != nil {
+		log.Printf("Error sending sync: %v", err)
+	}
 }
