@@ -11,15 +11,16 @@ import (
 var read *IMan.ManagerConnection
 var send *IMan.ManagerConnection
 
+var level = 0
+var levelPos = [][]int32{
+	{546, 293},
+	{549, 555},
+	{944, 556},
+	{547, 808},
+	{935, 814},
+}
+
 func main() {
-	level := 0
-	levelPos := [][]int{
-		{546, 293},
-		{549, 555},
-		{944, 556},
-		{547, 808},
-		{935, 814},
-	}
 	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
 	send, err = IMan.Connect(IMan.ModeInjection)
@@ -62,10 +63,16 @@ func main() {
 			{
 				println("start")
 			}
-		case input.BTN_RIGHT:
+		// case input.BTN_RIGHT:
+		// 	{
+		// 		if ev.Event.Value == 1 {
+		// 			playLevel(1)
+		// 			block = 1
+		// 		}
+		// 	}
+		case input.KEY_KP7:
 			{
 				if ev.Event.Value == 1 {
-					println("asdasd")
 					playLevel(1)
 					block = 1
 				}
@@ -89,23 +96,26 @@ func moveMouse(x, y int32) {
 	if err != nil {
 		log.Printf("Error sending sync: %v", err)
 	}
+	time.Sleep(150 * time.Millisecond)
 }
 
 func playLevel(i int) {
+	level = i
 	// playbtn
-	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 0})
+	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 1})
 
 	moveMouse(596, 223)
 	click()
+	moveMouse(levelPos[level][0], levelPos[level][1])
 	// moveMouse(596, 223)
-	// time.Sleep(10 * time.Millisecond)
+	// time.Sleep(150 * time.Millisecond)
 	// send.Send(IMan.WireEvent{
 	// 	// Type: input,
 	// 	Value: 1,
 	// 	Code:  input.BTN_LEFT,
 	// })
 	// send.Send(IMan.WireEvent{})
-	// time.Sleep(10 * time.Millisecond)
+	// time.Sleep(150 * time.Millisecond)
 	// send.Send(IMan.WireEvent{
 	// 	Type: input.EV_REL,
 	// 	// Type:  input.EV_ABS,
@@ -119,7 +129,7 @@ func playLevel(i int) {
 	// 	Code:  input.BTN_LEFT,
 	// })
 	// send.Send(IMan.WireEvent{})
-	// time.Sleep(10 * time.Millisecond)
+	// time.Sleep(150 * time.Millisecond)
 }
 func click() {
 	// 1. Mouse Down
@@ -129,7 +139,7 @@ func click() {
 		Value: 1, // 1 = Press
 	})
 	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	// 2. Mouse Up
 	send.Send(IMan.WireEvent{
@@ -138,5 +148,5 @@ func click() {
 		Value: 0, // 0 = Release
 	})
 	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 }
