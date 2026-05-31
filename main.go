@@ -74,57 +74,6 @@ func main() {
 		read.BlockInput(block)
 	}
 }
-func playLevel(i int) {
-	// playbtn
-	moveMouse(596, 223)
-	click()
-	// moveMouse(596, 223)
-	// time.Sleep(10 * time.Millisecond)
-	// read.Send(IMan.WireEvent{
-	// 	// Type: input,
-	// 	Value: 1,
-	// 	Code:  input.BTN_LEFT,
-	// })
-	// read.Send(IMan.WireEvent{})
-	// time.Sleep(10 * time.Millisecond)
-	// read.Send(IMan.WireEvent{
-	// 	Type: input.EV_REL,
-	// 	// Type:  input.EV_ABS,
-	// 	Value: -9,
-	// 	Code:  input.REL_X,
-	// })
-	// read.Send(IMan.WireEvent{})
-	// read.Send(IMan.WireEvent{
-	// 	// Type: input,
-	// 	Value: 0,
-	// 	Code:  input.BTN_LEFT,
-	// })
-	// read.Send(IMan.WireEvent{})
-	// time.Sleep(10 * time.Millisecond)
-}
-func click() {
-	read.Send(IMan.WireEvent{
-		// Type: input,
-		Value: 1,
-		Code:  input.BTN_LEFT,
-	})
-	read.Send(IMan.WireEvent{})
-	time.Sleep(10 * time.Millisecond)
-	read.Send(IMan.WireEvent{
-		Type: input.EV_REL,
-		// Type:  input.EV_ABS,
-		Value: -9,
-		Code:  input.REL_X,
-	})
-	read.Send(IMan.WireEvent{})
-	read.Send(IMan.WireEvent{
-		// Type: input,
-		Value: 0,
-		Code:  input.BTN_LEFT,
-	})
-	read.Send(IMan.WireEvent{})
-	time.Sleep(10 * time.Millisecond)
-}
 func moveMouse(x, y int32) {
 	err := send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: x})
 	if err != nil {
@@ -140,4 +89,54 @@ func moveMouse(x, y int32) {
 	if err != nil {
 		log.Printf("Error sending sync: %v", err)
 	}
+}
+
+func playLevel(i int) {
+	// playbtn
+	// send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 0})
+
+	moveMouse(596, 223)
+	click()
+	// moveMouse(596, 223)
+	// time.Sleep(10 * time.Millisecond)
+	// send.Send(IMan.WireEvent{
+	// 	// Type: input,
+	// 	Value: 1,
+	// 	Code:  input.BTN_LEFT,
+	// })
+	// send.Send(IMan.WireEvent{})
+	// time.Sleep(10 * time.Millisecond)
+	// send.Send(IMan.WireEvent{
+	// 	Type: input.EV_REL,
+	// 	// Type:  input.EV_ABS,
+	// 	Value: -9,
+	// 	Code:  input.REL_X,
+	// })
+	// send.Send(IMan.WireEvent{})
+	// send.Send(IMan.WireEvent{
+	// 	// Type: input,
+	// 	Value: 0,
+	// 	Code:  input.BTN_LEFT,
+	// })
+	// send.Send(IMan.WireEvent{})
+	// time.Sleep(10 * time.Millisecond)
+}
+func click() {
+	// 1. Mouse Down
+	send.Send(IMan.WireEvent{
+		Type:  input.EV_KEY, // Explicitly state this is a key/button event
+		Code:  input.BTN_LEFT,
+		Value: 1, // 1 = Press
+	})
+	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
+	time.Sleep(10 * time.Millisecond)
+
+	// 2. Mouse Up
+	send.Send(IMan.WireEvent{
+		Type:  input.EV_KEY,
+		Code:  input.BTN_LEFT,
+		Value: 0, // 0 = Release
+	})
+	send.Send(IMan.WireEvent{Type: input.EV_SYN}) // Explicit Sync
+	time.Sleep(10 * time.Millisecond)
 }

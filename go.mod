@@ -3,8 +3,8 @@ module mb
 go 1.26.3
 
 require (
-	github.com/rsa17826/go-input-lib v0.0.34
-	github.com/rsa17826/input-manager v0.0.53
+	github.com/rsa17826/go-input-lib v0.0.38
+	github.com/rsa17826/input-manager v0.0.57
 )
 
 require (
