@@ -25,7 +25,6 @@ func main() {
 	read, err = IMan.Connect(IMan.ModeBlocking)
 	send, err = IMan.Connect(IMan.ModeInjection)
 	// read, err := IMan.Connect(IMan.ModeListen, IMan.ModeInjection)
-	print(levelPos[level])
 	if err != nil {
 		panic(err)
 	}
@@ -97,14 +96,15 @@ func moveMouse(x, y int32) {
 	if err != nil {
 		log.Printf("Error sending sync: %v", err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 }
 
 func playLevel(i int) {
 	level = i
 	// playbtn
-	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 1})
+	// send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 1})
 
+	moveMouse(0, 0)
 	moveMouse(596, 223)
 	click()
 	moveMouse(0, 0)
@@ -119,7 +119,7 @@ func click() {
 		Value: 1,
 	})
 	send.Send(IMan.WireEvent{})
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// 2. Mouse Up
 	send.Send(IMan.WireEvent{
@@ -128,5 +128,5 @@ func click() {
 		Value: 0,
 	})
 	send.Send(IMan.WireEvent{})
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 }
