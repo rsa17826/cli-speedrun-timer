@@ -93,7 +93,7 @@ func moveMouse(x, y int32) {
 
 func playLevel(i int) {
 	// playbtn
-	// send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 0})
+	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: 0})
 
 	moveMouse(596, 223)
 	click()
