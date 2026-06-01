@@ -180,7 +180,7 @@ func pt() {
 var bi bool
 
 func main() {
-	// loadBestTimes()
+	loadBestTimes()
 
 	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
@@ -283,10 +283,10 @@ func main() {
 						// Save if it's a personal record for this segment
 						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
 							bestTimes[activeSplit] = finalSegmentTime
-							saveBestTimes()
 						}
 						if activeSplit < totalSplits-1 {
 							ended = true
+							saveBestTimes()
 						}
 					}
 				}
