@@ -240,6 +240,23 @@ func main() {
 						startTime = time.Now()
 					}
 				}
+			case input.KEY_TAB:
+				{
+					if ev.Event.Value == 1 {
+						go func() {
+							bi = true
+							send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+							time.Sleep(20 * time.Millisecond)
+							send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+							time.Sleep(20 * time.Millisecond)
+							// time.Sleep(2000 * time.Millisecond)
+							moveMouse(1920/2, (1080/2)+75)
+							click()
+							// time.Sleep(2000 * time.Millisecond)
+							bi = false
+						}()
+					}
+				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 1 {
 					ended = false
@@ -252,15 +269,19 @@ func main() {
 						splitTimes[i] = 0
 					}
 					read.BlockInput(0)
-					go func() {
-						time.Sleep(20 * time.Millisecond)
-						bi = true
-						// time.Sleep(2000 * time.Millisecond)
-						moveMouse(1920/2, (1080/2)+75)
-						click()
-						// time.Sleep(2000 * time.Millisecond)
-						bi = false
-					}()
+					// go func() {
+					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+					// 	time.Sleep(20 * time.Millisecond)
+					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+					// 	time.Sleep(20 * time.Millisecond)
+					// 	bi = true
+					// 	// time.Sleep(2000 * time.Millisecond)
+					// 	moveMouse(1920/2, (1080/2)+75)
+					// 	click()
+					// 	// time.Sleep(2000 * time.Millisecond)
+					// 	bi = false
+					// }()
+					loadBestTimes()
 					continue
 				}
 			case input.KEY_J:
@@ -271,7 +292,6 @@ func main() {
 				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
-					// go playLevel(1)
 					if started && !paused && !ended {
 						paused = true
 
@@ -288,6 +308,10 @@ func main() {
 							ended = true
 							saveBestTimes()
 						}
+						// else {
+						// 	level += 1
+						// 	playLevel(level)
+						// }
 					}
 				}
 			}
