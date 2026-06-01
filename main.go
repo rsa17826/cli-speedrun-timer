@@ -171,7 +171,7 @@ func pt() {
 	if !started {
 		fmt.Printf("Status: %sSTOPPED / READY%s", White, Reset)
 	} else if paused {
-		fmt.Printf("Status: %sPAUSED (Next WASD starts Split %d)%s", Yellow, activeSplit+1, Reset)
+		fmt.Printf("Status: %sPAUSED (Next WASD starts Split %d)%s", Yellow, activeSplit+2, Reset)
 	} else {
 		fmt.Printf("Status: %sRUNNING%s", Green, Reset)
 	}
@@ -284,7 +284,7 @@ func main() {
 						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
 							bestTimes[activeSplit] = finalSegmentTime
 						}
-						if activeSplit < totalSplits-1 {
+						if activeSplit == totalSplits-1 {
 							ended = true
 							saveBestTimes()
 						}
