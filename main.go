@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/rsa17826/go-input-lib"
@@ -27,6 +30,7 @@ var elapsed time.Duration         // Tracks current live split time
 
 // Split Variables
 const totalSplits = 5
+const filePath = "./times"
 
 var activeSplit = 0
 var splitTimes = make([]time.Duration, totalSplits)
@@ -40,7 +44,40 @@ const (
 	Yellow = "\033[33m"
 	Cyan   = "\033[36m"
 	Purple = "\033[35m"
+	White  = "\033[37m"
 )
+
+// Load best times from file
+func loadBestTimes() {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return // File doesn't exist yet, ignore
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	i := 0
+	for scanner.Scan() && i < totalSplits {
+		ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
+		if err == nil {
+			bestTimes[i] = time.Duration(ms) * time.Millisecond
+		}
+		i++
+	}
+}
+
+// Save best times to file
+func saveBestTimes() {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	for _, t := range bestTimes {
+		fmt.Fprintf(file, "%d\n", t.Milliseconds())
+	}
+}
 
 func formatDuration(d time.Duration) string {
 	h := int(d.Hours())
@@ -51,40 +88,87 @@ func formatDuration(d time.Duration) string {
 }
 
 func pt() {
-	// Clear screen to redraw the full layout cleanly without trailing text
+	// Clear screen to redraw cleanly
 	fmt.Print("\033[H\033[2J")
 
-	fmt.Println("============ SPEEDRUN SPLITS ============")
+	fmt.Println("================== SPEEDRUN SPLITS ==================")
+
+	var currentTotal time.Duration
+	var bestTotal time.Duration
+
 	for i := 0; i < totalSplits; i++ {
 		splitName := fmt.Sprintf("Segment %d:", i+1)
+		bestTotal += bestTimes[i]
+
+		var dispTime time.Duration
+		var segmentColor = Cyan
+
+		if i < activeSplit {
+			dispTime = splitTimes[i]
+			currentTotal += splitTimes[i]
+			// Completed segment: color based on whether it beat PB
+			if bestTimes[i] > 0 {
+				if dispTime <= bestTimes[i] {
+					segmentColor = Green
+				} else {
+					segmentColor = Red
+				}
+			}
+		} else if i == activeSplit && started {
+			dispTime = elapsed
+			currentTotal += elapsed
+			// Active segment live color profiling
+			if bestTimes[i] > 0 {
+				if dispTime <= bestTimes[i] {
+					segmentColor = Green
+				} else {
+					segmentColor = Red
+				}
+			} else {
+				segmentColor = Yellow
+			}
+		} else {
+			dispTime = 0
+		}
+
 		bestStr := "NONE"
 		if bestTimes[i] > 0 {
 			bestStr = formatDuration(bestTimes[i])
 		}
 
-		if started && i == activeSplit {
-			// Highlights the currently active split
-			statusColor := Green
-			if paused {
-				statusColor = Yellow
-			}
-			fmt.Printf("%s %-10s Current: %s%s%s (Best: %s%s%s)\n",
-				statusColor, splitName, statusColor, formatDuration(elapsed), Reset, Purple, bestStr, Reset)
+		timeStr := "--:--:--.--"
+		if started && i <= activeSplit || i < activeSplit {
+			timeStr = formatDuration(dispTime)
+		}
+
+		fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
+			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset)
+	}
+
+	fmt.Println("-----------------------------------------------------")
+
+	// Determine Total Time Pace Color
+	totalColor := Cyan
+	if bestTotal > 0 && started {
+		if currentTotal <= bestTotal {
+			totalColor = Green
 		} else {
-			// Shows finished splits or upcoming splits
-			recordedStr := "--:--:--.--"
-			if splitTimes[i] > 0 {
-				recordedStr = formatDuration(splitTimes[i])
-			}
-			fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
-				splitName, Cyan, recordedStr, Reset, Purple, bestStr, Reset)
+			totalColor = Red
 		}
 	}
-	fmt.Println("=========================================")
+
+	bestTotalStr := "NONE"
+	if bestTotal > 0 {
+		bestTotalStr = formatDuration(bestTotal)
+	}
+
+	fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)",
+		"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset)
+	fmt.Println("\n=====================================================")
 
 	// Status Line Footer
 	if !started {
-		fmt.Printf("Status: %sSTOPPED / READY%s", Red, Reset)
+		fmt.Printf("Status: %sSTOPPED / READY%s", White, Reset)
 	} else if paused {
 		fmt.Printf("Status: %sPAUSED (Next WASD starts Split %d)%s", Yellow, activeSplit+1, Reset)
 	} else {
@@ -93,6 +177,8 @@ func pt() {
 }
 
 func main() {
+	loadBestTimes()
+
 	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
 	send, err = IMan.Connect(IMan.ModeInjection)
@@ -114,7 +200,6 @@ func main() {
 					continue
 				}
 
-				// Live update of current split
 				elapsed = accumulatedTime + time.Since(startTime)
 				pt()
 			}
@@ -132,7 +217,6 @@ func main() {
 			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
 				if ev.Event.Value == 1 { // Key Down
 					if !started {
-						// Hard Fresh Start from zero
 						started = true
 						paused = false
 						activeSplit = 0
@@ -143,7 +227,6 @@ func main() {
 						}
 						startTime = time.Now()
 					} else if paused {
-						// Unpausing: Move to NEXT split segment if we haven't maxed out
 						if activeSplit < totalSplits-1 {
 							activeSplit++
 							elapsed = 0
@@ -151,7 +234,6 @@ func main() {
 							paused = false
 							startTime = time.Now()
 						} else {
-							// If we completed all 5 segments, unpausing just resumes final segment time tracking
 							paused = false
 							startTime = time.Now()
 						}
@@ -164,7 +246,6 @@ func main() {
 					activeSplit = 0
 					accumulatedTime = 0
 					elapsed = 0
-					// Reset temporary session run times, keeping PB records intact
 					for i := range splitTimes {
 						splitTimes[i] = 0
 					}
@@ -174,15 +255,15 @@ func main() {
 					if started && !paused {
 						paused = true
 
-						// Commit current accumulated run segment time
 						finalSegmentTime := accumulatedTime + time.Since(startTime)
 						accumulatedTime = finalSegmentTime
 						elapsed = finalSegmentTime
 						splitTimes[activeSplit] = finalSegmentTime
 
-						// Check and update Personal Best time for this specific segment
+						// Save if it's a personal record for this segment
 						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
 							bestTimes[activeSplit] = finalSegmentTime
+							saveBestTimes()
 						}
 					}
 				}
