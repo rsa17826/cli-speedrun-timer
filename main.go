@@ -177,8 +177,10 @@ func pt() {
 	}
 }
 
+var bi bool
+
 func main() {
-	loadBestTimes()
+	// loadBestTimes()
 
 	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
@@ -250,8 +252,15 @@ func main() {
 						splitTimes[i] = 0
 					}
 				}
+			case input.KEY_J:
+				{
+					if ev.Event.Value == 1 { // Click Down
+						go moveMouse(0, 0)
+					}
+				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
+					// go playLevel(1)
 					if started && !paused && !ended {
 						paused = true
 
@@ -272,26 +281,33 @@ func main() {
 				}
 			}
 		}
-		read.BlockInput(0)
+		if bi {
+			read.BlockInput(1)
+		} else {
+			read.BlockInput(0)
+		}
 	}
 }
 
 func moveMouse(x, y int32) {
-	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: x})
-	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: y})
-	send.Send(IMan.WireEvent{})
-	time.Sleep(150 * time.Millisecond)
+	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: -10000})
+	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: -10000})
+	_ = send.Send(IMan.WireEvent{})
+	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: x / 2})
+	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: y / 2})
+	_ = send.Send(IMan.WireEvent{})
+	time.Sleep(10 * time.Millisecond)
 }
 
 func playLevel(i int) {
+	bi = true
 	level = i
-	moveMouse(0, 0)
 	moveMouse(596, 223)
 	click()
-	moveMouse(0, 0)
 	moveMouse(levelPos[level][0], levelPos[level][1])
 	click()
 	moveMouse(1920/2, 1080/2)
+	bi = false
 }
 
 func click() {
@@ -301,7 +317,7 @@ func click() {
 
 	send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.BTN_LEFT, Value: 0})
 	send.Send(IMan.WireEvent{})
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
 }
 
 // hl.window_rule({

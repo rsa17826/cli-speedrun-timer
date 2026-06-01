@@ -31,6 +31,13 @@
           libXxf86vm
           mesa
         ];
+        pythonEnv = pkgs.python313.withPackages (
+          ps: with ps; [
+            pynput
+            pywayland
+          ]
+        );
+
       in
       {
         packages = {
@@ -49,14 +56,16 @@
         };
         devShells = {
           default = pkgs.mkShell {
-            # Use 'inputsFrom' to pull dependencies from the package automatically
-            inputsFrom = [ self.packages.${system}.default ];
+            buildInputs = [ pythonEnv ];
 
-            # Add extra development tools here
-            nativeBuildInputs = with pkgs; [
-              go
-              gopls
-            ];
+            # # Use 'inputsFrom' to pull dependencies from the package automatically
+            # inputsFrom = [ self.packages.${system}.default ];
+
+            # # Add extra development tools here
+            # nativeBuildInputs = with pkgs; [
+            #   go
+            #   gopls
+            # ];
           };
         };
       }
