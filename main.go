@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,11 +32,15 @@ var elapsed time.Duration         // Tracks current live split time
 
 // Split Variables
 const totalSplits = 5
-const filePath = "./times"
+
+var filePath = "./times"
 
 var activeSplit = 0
 var splitTimes = make([]time.Duration, totalSplits)
 var bestTimes = make([]time.Duration, totalSplits)
+
+// IL Mode Config
+var ilMode int // 0 means standard full-run, 1-5 indicates specific IL split
 
 // ANSI Color Escape Codes
 const (
@@ -57,13 +62,20 @@ func loadBestTimes() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	i := 0
-	for scanner.Scan() && i < totalSplits {
+	if ilMode > 0 {
 		ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
 		if err == nil {
-			bestTimes[i] = time.Duration(ms) * time.Millisecond
+			bestTimes[ilMode] = time.Duration(ms) * time.Millisecond
 		}
-		i++
+	} else {
+		i := 0
+		for scanner.Scan() && i < totalSplits {
+			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
+			if err == nil {
+				bestTimes[i] = time.Duration(ms) * time.Millisecond
+			}
+			i++
+		}
 	}
 }
 
@@ -74,9 +86,12 @@ func saveBestTimes() {
 		return
 	}
 	defer file.Close()
-
-	for _, t := range bestTimes {
-		fmt.Fprintf(file, "%d\n", t.Milliseconds())
+	if ilMode > 0 {
+		fmt.Fprintf(file, "%d\n", bestTimes[ilMode].Milliseconds())
+	} else {
+		for _, t := range bestTimes {
+			fmt.Fprintf(file, "%d\n", t.Milliseconds())
+		}
 	}
 }
 
@@ -92,12 +107,21 @@ func pt() {
 	// Clear screen to redraw cleanly
 	fmt.Print("\033[H\033[2J")
 
-	fmt.Println("================== SPEEDRUN SPLITS ==================")
+	if ilMode > 0 {
+		fmt.Printf("============== INDIVIDUAL LEVEL (IL %d) ==============", ilMode)
+	} else {
+		fmt.Println("================== SPEEDRUN SPLITS ==================")
+	}
 
 	var currentTotal time.Duration
 	var bestTotal time.Duration
 
-	for i := 0; i < totalSplits; i++ {
+	for i := range totalSplits {
+		// Skip rendering other segments if we are focused on a specific single IL
+		if ilMode > 0 && i != ilMode-1 {
+			continue
+		}
+
 		splitName := fmt.Sprintf("Segment %d:", i+1)
 		bestTotal += bestTimes[i]
 
@@ -107,7 +131,6 @@ func pt() {
 		if i < activeSplit {
 			dispTime = splitTimes[i]
 			currentTotal += splitTimes[i]
-			// Completed segment: color based on whether it beat PB
 			if bestTimes[i] > 0 {
 				if dispTime <= bestTimes[i] {
 					segmentColor = Green
@@ -118,7 +141,6 @@ func pt() {
 		} else if i == activeSplit && started {
 			dispTime = elapsed
 			currentTotal += elapsed
-			// Active segment live color profiling
 			if bestTimes[i] > 0 {
 				if dispTime <= bestTimes[i] {
 					segmentColor = Green
@@ -148,30 +170,36 @@ func pt() {
 
 	fmt.Println("-----------------------------------------------------")
 
-	// Determine Total Time Pace Color
-	totalColor := Cyan
-	if bestTotal > 0 && started {
-		if currentTotal <= bestTotal {
-			totalColor = Green
-		} else {
-			totalColor = Red
+	// Hide or alter totals display contextually for single-run ILs
+	if ilMode == 0 {
+		totalColor := Cyan
+		if bestTotal > 0 && started {
+			if currentTotal <= bestTotal {
+				totalColor = Green
+			} else {
+				totalColor = Red
+			}
 		}
-	}
 
-	bestTotalStr := "NONE"
-	if bestTotal > 0 {
-		bestTotalStr = formatDuration(bestTotal)
-	}
+		bestTotalStr := "NONE"
+		if bestTotal > 0 {
+			bestTotalStr = formatDuration(bestTotal)
+		}
 
-	fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)",
-		"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset)
+		fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset)
+	}
 	fmt.Println("\n=====================================================")
 
 	// Status Line Footer
 	if !started {
 		fmt.Printf("Status: %sSTOPPED / READY%s", White, Reset)
 	} else if paused {
-		fmt.Printf("Status: %sPAUSED (Next WASD starts Split %d)%s", Yellow, activeSplit+2, Reset)
+		nextText := fmt.Sprintf("Split %d", activeSplit+2)
+		if ilMode > 0 {
+			nextText = "Done"
+		}
+		fmt.Printf("Status: %sPAUSED (Next WASD starts %s)%s", Yellow, nextText, Reset)
 	} else {
 		fmt.Printf("Status: %sRUNNING%s", Green, Reset)
 	}
@@ -180,6 +208,19 @@ func pt() {
 var bi bool
 
 func main() {
+	// Parse CLI inputs
+	flag.IntVar(&ilMode, "il", 0, "Run a single Individual Level (1-5). Standard mode if 0.")
+	flag.Parse()
+
+	// Adjust file paths to prevent overwriting Full Run times during an IL run
+	if ilMode < 0 || ilMode > 5 {
+		fmt.Println("Error: -il option must be between 1 and 5")
+		os.Exit(1)
+	}
+	if ilMode > 0 {
+		filePath = fmt.Sprintf("./times_il_%d", ilMode)
+	}
+
 	loadBestTimes()
 
 	var err error
@@ -225,7 +266,14 @@ func main() {
 					if !started {
 						started = true
 						paused = false
-						activeSplit = 0
+
+						// If IL Mode is active, offset activeSplit to the selected level
+						if ilMode > 0 {
+							activeSplit = ilMode - 1
+						} else {
+							activeSplit = 0
+						}
+
 						elapsed = 0
 						accumulatedTime = 0
 						for i := range splitTimes {
@@ -233,29 +281,28 @@ func main() {
 						}
 						startTime = time.Now()
 					} else if paused {
-						activeSplit++
-						elapsed = 0
-						accumulatedTime = 0
-						paused = false
-						startTime = time.Now()
+						// In IL mode, pausing implies the run is complete, do not advance splits.
+						if ilMode == 0 {
+							activeSplit++
+							elapsed = 0
+							accumulatedTime = 0
+							paused = false
+							startTime = time.Now()
+						}
 					}
 				}
 			case input.KEY_TAB:
-				{
-					if ev.Event.Value == 1 {
-						go func() {
-							bi = true
-							send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-							time.Sleep(20 * time.Millisecond)
-							send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
-							time.Sleep(20 * time.Millisecond)
-							// time.Sleep(2000 * time.Millisecond)
-							moveMouse(1920/2, (1080/2)+75)
-							click()
-							// time.Sleep(2000 * time.Millisecond)
-							bi = false
-						}()
-					}
+				if ev.Event.Value == 1 {
+					go func() {
+						bi = true
+						send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+						time.Sleep(20 * time.Millisecond)
+						send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+						time.Sleep(20 * time.Millisecond)
+						moveMouse(1920/2, (1080/2)+75)
+						click()
+						bi = false
+					}()
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 1 {
@@ -285,10 +332,8 @@ func main() {
 					continue
 				}
 			case input.KEY_J:
-				{
-					if ev.Event.Value == 1 { // Click Down
-						go moveMouse(0, 0)
-					}
+				if ev.Event.Value == 1 {
+					go moveMouse(0, 0)
 				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
@@ -300,11 +345,13 @@ func main() {
 						elapsed = finalSegmentTime
 						splitTimes[activeSplit] = finalSegmentTime
 
-						// Save if it's a personal record for this segment
+						// Save PB for the active segment
 						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
 							bestTimes[activeSplit] = finalSegmentTime
 						}
-						if activeSplit == totalSplits-1 {
+
+						// End the speedrun if full run hits limit OR if we are in single IL mode
+						if ilMode > 0 || activeSplit == totalSplits-1 {
 							ended = true
 							saveBestTimes()
 						}
