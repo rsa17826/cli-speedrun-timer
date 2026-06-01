@@ -63,9 +63,11 @@ func loadBestTimes() {
 
 	scanner := bufio.NewScanner(file)
 	if ilMode > 0 {
-		ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
-		if err == nil {
-			bestTimes[ilMode] = time.Duration(ms) * time.Millisecond
+		if scanner.Scan() {
+			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
+			if err == nil {
+				bestTimes[ilMode-1] = time.Duration(ms) * time.Millisecond
+			}
 		}
 	} else {
 		i := 0
@@ -87,7 +89,7 @@ func saveBestTimes() {
 	}
 	defer file.Close()
 	if ilMode > 0 {
-		fmt.Fprintf(file, "%d\n", bestTimes[ilMode].Milliseconds())
+		fmt.Fprintf(file, "%d\n", bestTimes[ilMode-1].Milliseconds())
 	} else {
 		for _, t := range bestTimes {
 			fmt.Fprintf(file, "%d\n", t.Milliseconds())
