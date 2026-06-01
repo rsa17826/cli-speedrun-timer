@@ -189,7 +189,7 @@ func main() {
 		panic(err)
 	}
 
-	ticker := time.NewTicker(10 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Millisecond)
 	done := make(chan bool)
 
 	go func() {
