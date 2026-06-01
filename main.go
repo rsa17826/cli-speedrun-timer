@@ -349,26 +349,28 @@ func main() {
 						splitTimes[i] = 0
 					}
 					read.BlockInput(0)
-					if ilMode > 0 {
-						go func() {
-							// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-							// time.Sleep(20 * time.Millisecond)
-							// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
-							time.Sleep(20 * time.Millisecond)
-							bi = true
-							// time.Sleep(2000 * time.Millisecond)
-							moveMouse(1920/2, (1080/2)+75)
-							click()
-							time.Sleep(300 * time.Millisecond)
-							moveMouse(596, 223)
-							click()
+					go func() {
+						// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+						// time.Sleep(20 * time.Millisecond)
+						// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+						time.Sleep(20 * time.Millisecond)
+						bi = true
+						// time.Sleep(2000 * time.Millisecond)
+						moveMouse(1920/2, (1080/2)+75)
+						click()
+						time.Sleep(300 * time.Millisecond)
+						moveMouse(596, 223)
+						click()
+						if ilMode > 0 {
 							moveMouse(levelPos[ilMode-1][0], levelPos[ilMode-1][1])
-							click()
-							moveMouse(1920/2, 1080/2)
-							// time.Sleep(2000 * time.Millisecond)
-							bi = false
-						}()
-					}
+						} else {
+							moveMouse(levelPos[0][0], levelPos[0][1])
+						}
+						click()
+						moveMouse(1920/2, 1080/2)
+						// time.Sleep(2000 * time.Millisecond)
+						bi = false
+					}()
 					loadBestTimes()
 					continue
 				}

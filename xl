@@ -1,0 +1,21 @@
+=MIN(MAP(spos, LAMBDA(cell,
+  IF(OFFSET(cell, 2, 0)=person,
+    LET(
+      clean_cell, REGEXREPLACE(TO_TEXT(cell), "\.xxx", ""),
+      IF(ISNUMBER(SEARCH(":", clean_cell)),
+        LET(
+          parts, SPLIT(clean_cell, ":"),
+          minutes, INDEX(parts, 1),
+          seconds, INDEX(parts, 2),
+          IF(AND(ISNUMBER(minutes), ISNUMBER(seconds)), (minutes * 60) + seconds, 99999)
+        ),
+        IF(ISNUMBER(VALUE(clean_cell)), VALUE(clean_cell), 99999)
+      )
+    ),
+    99999
+  )
+)))
+
+
+
+=OFFSET(B1, 2 - MOD(ROW()-1, 3), 0) = "J"
