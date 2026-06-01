@@ -146,3 +146,6 @@ func click() {
 	send.Send(IMan.WireEvent{})
 	time.Sleep(150 * time.Millisecond)
 }
+
+// keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 300ms
+// kitty --class Mathbreakers -c /dev/null go run .
