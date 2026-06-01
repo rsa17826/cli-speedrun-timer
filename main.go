@@ -251,6 +251,17 @@ func main() {
 					for i := range splitTimes {
 						splitTimes[i] = 0
 					}
+					read.BlockInput(0)
+					go func() {
+						time.Sleep(20 * time.Millisecond)
+						bi = true
+						// time.Sleep(2000 * time.Millisecond)
+						moveMouse(1920/2, (1080/2)+75)
+						click()
+						// time.Sleep(2000 * time.Millisecond)
+						bi = false
+					}()
+					continue
 				}
 			case input.KEY_J:
 				{
@@ -290,12 +301,57 @@ func main() {
 }
 
 func moveMouse(x, y int32) {
-	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: -10000})
-	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: -10000})
-	_ = send.Send(IMan.WireEvent{})
-	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: x / 2})
-	_ = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: y / 2})
-	_ = send.Send(IMan.WireEvent{})
+	var err error
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: -9999})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: -9999})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: -10000})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: -10000})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: x / 2})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: y / 2})
+	if err != nil {
+		println(err)
+	}
+	err = send.Send(IMan.WireEvent{Type: 0, Value: 0, Code: 0})
+	if err != nil {
+		println(err)
+	}
 	time.Sleep(10 * time.Millisecond)
 }
 
