@@ -1,1 +1,7 @@
-53341
+46653
+=MIN(MAP(1:1, LAMBDA(cell, IFERROR(
+  IF(AND(ISNUMBER(INDEX(SPLIT(cell, ":"), 1)), ISNUMBER(INDEX(SPLIT(cell, ":"), 2))),
+    INDEX(SPLIT(cell, ":"), 1)*60 + INDEX(SPLIT(cell, ":"), 2),
+    ""
+  )
+))))

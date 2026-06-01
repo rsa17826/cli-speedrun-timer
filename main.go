@@ -5,7 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/rsa17826/go-input-lib"
@@ -106,20 +109,23 @@ func formatDuration(d time.Duration) string {
 }
 
 func pt() {
-	// Clear screen to redraw cleanly
-	fmt.Print("\033[H\033[2J")
+	// Use a StringBuilder to buffer the output into a single write operation.
+	// This prevents the terminal from rendering line-by-line.
+	var sb strings.Builder
+
+	// Move cursor to top-left corner (0,0) WITHOUT clearing the screen
+	sb.WriteString("\033[H")
 
 	if ilMode > 0 {
-		fmt.Printf("============== INDIVIDUAL LEVEL (IL %d) ==============", ilMode)
+		sb.WriteString(fmt.Sprintf("============== INDIVIDUAL LEVEL (IL %d) ==============\n", ilMode))
 	} else {
-		fmt.Println("================== SPEEDRUN SPLITS ==================")
+		sb.WriteString("================== SPEEDRUN SPLITS ==================\n")
 	}
 
 	var currentTotal time.Duration
 	var bestTotal time.Duration
 
 	for i := range totalSplits {
-		// Skip rendering other segments if we are focused on a specific single IL
 		if ilMode > 0 && i != ilMode-1 {
 			continue
 		}
@@ -166,13 +172,14 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
-			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset)
+		// Added \033[K at the end of the line to clear any residual characters
+		// from previous prints if a line suddenly gets shorter.
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset))
 	}
 
-	fmt.Println("-----------------------------------------------------")
+	sb.WriteString("-----------------------------------------------------\033[K\n")
 
-	// Hide or alter totals display contextually for single-run ILs
 	if ilMode == 0 {
 		totalColor := Cyan
 		if bestTotal > 0 && started {
@@ -188,28 +195,46 @@ func pt() {
 			bestTotalStr = formatDuration(bestTotal)
 		}
 
-		fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
-			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset)
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\033[K",
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset))
 	}
-	fmt.Println("\n=====================================================")
+	sb.WriteString("\n=====================================================\033[K\n")
 
 	// Status Line Footer
 	if !started {
-		fmt.Printf("Status: %sSTOPPED / READY%s", White, Reset)
+		sb.WriteString(fmt.Sprintf("Status: %sSTOPPED / READY%s", White, Reset))
 	} else if paused {
 		nextText := fmt.Sprintf("Split %d", activeSplit+2)
 		if ilMode > 0 {
 			nextText = "Done"
 		}
-		fmt.Printf("Status: %sPAUSED (Next WASD starts %s)%s", Yellow, nextText, Reset)
+		sb.WriteString(fmt.Sprintf("Status: %sPAUSED (Next WASD starts %s)%s", Yellow, nextText, Reset))
 	} else {
-		fmt.Printf("Status: %sRUNNING%s", Green, Reset)
+		sb.WriteString(fmt.Sprintf("Status: %sRUNNING%s", Green, Reset))
 	}
+
+	// Clear any leftover lines below the UI just in case the UI shrunk
+	sb.WriteString("\033[J")
+
+	// Print everything to the screen in ONE shot
+	fmt.Print(sb.String())
 }
 
 var bi bool
 
 func main() {
+	// Hide the cursor immediately
+	fmt.Print("\033[?25l")
+
+	// Standard cleanup: Ensure the cursor comes back if the user hits Ctrl+C
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Print("\033[?25h")
+		os.Exit(0)
+	}()
 	// Parse CLI inputs
 	flag.IntVar(&ilMode, "il", 0, "Run a single Individual Level (1-5). Standard mode if 0.")
 	flag.Parse()
@@ -295,19 +320,25 @@ func main() {
 				}
 			case input.KEY_TAB:
 				if ev.Event.Value == 1 {
-					go func() {
-						bi = true
-						send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-						time.Sleep(20 * time.Millisecond)
-						send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
-						time.Sleep(20 * time.Millisecond)
-						moveMouse(1920/2, (1080/2)+75)
-						click()
-						bi = false
-					}()
+					ended = false
+					started = false
+					paused = false
+					activeSplit = 0
+					accumulatedTime = 0
+					elapsed = 0
+					// go func() {
+					// 	bi = true
+					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+					// 	time.Sleep(20 * time.Millisecond)
+					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+					// 	time.Sleep(20 * time.Millisecond)
+					// 	moveMouse(1920/2, (1080/2)+75)
+					// 	click()
+					// 	bi = false
+					// }()
 				}
 			case input.KEY_ESC:
-				if ev.Event.Value == 1 {
+				if ev.Event.Value == 0 {
 					ended = false
 					started = false
 					paused = false
@@ -318,18 +349,26 @@ func main() {
 						splitTimes[i] = 0
 					}
 					read.BlockInput(0)
-					// go func() {
-					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-					// 	time.Sleep(20 * time.Millisecond)
-					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
-					// 	time.Sleep(20 * time.Millisecond)
-					// 	bi = true
-					// 	// time.Sleep(2000 * time.Millisecond)
-					// 	moveMouse(1920/2, (1080/2)+75)
-					// 	click()
-					// 	// time.Sleep(2000 * time.Millisecond)
-					// 	bi = false
-					// }()
+					if ilMode > 0 {
+						go func() {
+							// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
+							// time.Sleep(20 * time.Millisecond)
+							// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
+							time.Sleep(20 * time.Millisecond)
+							bi = true
+							// time.Sleep(2000 * time.Millisecond)
+							moveMouse(1920/2, (1080/2)+75)
+							click()
+							time.Sleep(300 * time.Millisecond)
+							moveMouse(596, 223)
+							click()
+							moveMouse(levelPos[ilMode-1][0], levelPos[ilMode-1][1])
+							click()
+							moveMouse(1920/2, 1080/2)
+							// time.Sleep(2000 * time.Millisecond)
+							bi = false
+						}()
+					}
 					loadBestTimes()
 					continue
 				}
