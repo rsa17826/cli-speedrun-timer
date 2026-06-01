@@ -24,6 +24,7 @@ var levelPos = [][]int32{
 }
 var started bool
 var paused bool
+var ended bool
 var startTime time.Time
 var accumulatedTime time.Duration // Tracks time accumulated across pauses for current split
 var elapsed time.Duration         // Tracks current live split time
@@ -216,6 +217,9 @@ func main() {
 			switch ev.Event.Code {
 			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
 				if ev.Event.Value == 1 { // Key Down
+					if ended {
+						continue
+					}
 					if !started {
 						started = true
 						paused = false
@@ -227,20 +231,16 @@ func main() {
 						}
 						startTime = time.Now()
 					} else if paused {
-						if activeSplit < totalSplits-1 {
-							activeSplit++
-							elapsed = 0
-							accumulatedTime = 0
-							paused = false
-							startTime = time.Now()
-						} else {
-							paused = false
-							startTime = time.Now()
-						}
+						activeSplit++
+						elapsed = 0
+						accumulatedTime = 0
+						paused = false
+						startTime = time.Now()
 					}
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 1 {
+					ended = false
 					started = false
 					paused = false
 					activeSplit = 0
@@ -252,7 +252,7 @@ func main() {
 				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
-					if started && !paused {
+					if started && !paused && !ended {
 						paused = true
 
 						finalSegmentTime := accumulatedTime + time.Since(startTime)
@@ -264,6 +264,9 @@ func main() {
 						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
 							bestTimes[activeSplit] = finalSegmentTime
 							saveBestTimes()
+						}
+						if activeSplit < totalSplits-1 {
+							ended = true
 						}
 					}
 				}
