@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/rsa17826/go-input-lib"
@@ -19,6 +19,27 @@ var levelPos = [][]int32{
 	{547, 808},
 	{935, 814},
 }
+var started bool
+var paused bool
+var startTime time.Time
+var elapsed time.Duration
+
+func pt() {
+	// Extract hours, minutes, and seconds from the duration
+	h := int(elapsed.Hours())
+	m := int(elapsed.Minutes()) % 60
+	s := int(elapsed.Seconds()) % 60
+	ms := int(elapsed.Milliseconds()) % 1000
+
+	// Format as HH:MM:SS.mmm (padded with leading zeros)
+	if !started {
+		fmt.Printf("\nTimer: %02d:%02d:%02d.%03d, STOPPED", h, m, s, ms)
+	} else if paused {
+		fmt.Printf("\nTimer: %02d:%02d:%02d.%03d, PAUSED", h, m, s, ms)
+	} else {
+		fmt.Printf("\nTimer: %02d:%02d:%02d.%03d", h, m, s, ms)
+	}
+}
 
 func main() {
 	var err error
@@ -28,75 +49,92 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// ticker := time.NewTicker(1 * time.Millisecond)
-	// done := make(chan bool)
-	// startTime := time.Now()
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case <-done:
-	// 			return
-	// 		case <-ticker.C:
-	// 			elapsed := time.Since(startTime)
-
-	// 			// Extract hours, minutes, and seconds from the duration
-	// 			h := int(elapsed.Hours())
-	// 			m := int(elapsed.Minutes()) % 60
-	// 			s := int(elapsed.Seconds()) % 60
-	// 			ms := int(elapsed.Milliseconds()) % 1000
-
-	// 			// Format as HH:MM:SS.mmm (padded with leading zeros)
-	// 			fmt.Printf("\nTimer: %02d:%02d:%02d.%03d", h, m, s, ms)
-	// 		}
-	// 	}
-	// }()
+	ticker := time.NewTicker(1 * time.Millisecond)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if !started || paused {
+					pt()
+					continue
+				}
+				elapsed = time.Since(startTime)
+				pt()
+			}
+		}
+	}()
 	for {
 		ev, err := read.ReadNext()
 		if err != nil {
 			panic(err)
 		}
 
-		switch ev.Event.Code {
-		case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
-			{
-				println("start")
-			}
-		// case input.BTN_RIGHT:
-		// 	{
-		// 		if ev.Event.Value == 1 {
-		// 			playLevel(1)
-		// 			block = 1
-		// 		}
-		// 	}
-		case input.KEY_KP7:
-			{
-				read.BlockInput(1)
-				if ev.Event.Value == 1 {
-					println("7")
-					go playLevel(0)
+		if ev.Event.Type == input.EV_KEY {
+			switch ev.Event.Code {
+			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
+				{
+					if paused {
+						paused = false
+					} else {
+						if !started {
+							started = true
+							startTime = time.Now()
+						}
+					}
 				}
-				continue
+			case input.KEY_ESC:
+				{
+					started = false
+				}
+			case input.BTN_RIGHT:
+				{
+					paused = true
+				}
+				// case input.BTN_RIGHT:
+				// 	{
+				// 		if ev.Event.Value == 1 {
+				// 			playLevel(1)
+				// 			block = 1
+				// 		}
+				// 	}
+				// case input.KEY_KP7:
+				// 	{
+				// 		read.BlockInput(1)
+				// 		if ev.Event.Value == 1 {
+				// 			println("7")
+				// 			go playLevel(0)
+				// 		}
+				// 		continue
+				// 	}
+				// case input.KEY_ESC:
+				// 	{
+				// 		read.BlockInput(0)
+				// 		if ev.Event.Value == 1 {
+				// 			println("a")
+				// 			go func() {
+				// 				send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: -99999})
+				// 				send.Send(IMan.WireEvent{})
+				// 				send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_Y, Value: -999})
+				// 				send.Send(IMan.WireEvent{})
+				// 				moveMouse(947, 621)
+				// 				click()
+				// 			}()
+				// 		}
+				// 		continue
+				// 	}
 			}
 		}
 		read.BlockInput(0)
 	}
 }
 func moveMouse(x, y int32) {
-	err := send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: x})
-	if err != nil {
-		log.Printf("Error sending movement: %v", err)
-	}
-	err = send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: y})
-
-	if err != nil {
-		log.Printf("Error sending movement: %v", err)
-	}
-
-	err = send.Send(IMan.WireEvent{})
-	if err != nil {
-		log.Printf("Error sending sync: %v", err)
-	}
-	time.Sleep(2 * time.Second)
+	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_X, Value: x})
+	send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: input.ABS_Y, Value: y})
+	send.Send(IMan.WireEvent{})
+	time.Sleep(150 * time.Millisecond)
 }
 
 func playLevel(i int) {
@@ -110,6 +148,7 @@ func playLevel(i int) {
 	moveMouse(0, 0)
 	moveMouse(levelPos[level][0], levelPos[level][1])
 	click()
+	moveMouse(1920/2, 1080/2)
 }
 func click() {
 	// 1. Mouse Down
@@ -119,7 +158,7 @@ func click() {
 		Value: 1,
 	})
 	send.Send(IMan.WireEvent{})
-	time.Sleep(2 * time.Second)
+	time.Sleep(30 * time.Millisecond)
 
 	// 2. Mouse Up
 	send.Send(IMan.WireEvent{
@@ -128,5 +167,5 @@ func click() {
 		Value: 0,
 	})
 	send.Send(IMan.WireEvent{})
-	time.Sleep(2 * time.Second)
+	time.Sleep(150 * time.Millisecond)
 }
