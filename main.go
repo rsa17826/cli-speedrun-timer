@@ -22,23 +22,76 @@ var levelPos = [][]int32{
 var started bool
 var paused bool
 var startTime time.Time
-var accumulatedTime time.Duration // Tracks time accumulated across pauses
-var elapsed time.Duration         // Tracks time accumulated across pauses
+var accumulatedTime time.Duration // Tracks time accumulated across pauses for current split
+var elapsed time.Duration         // Tracks current live split time
+
+// Split Variables
+const totalSplits = 5
+
+var activeSplit = 0
+var splitTimes = make([]time.Duration, totalSplits)
+var bestTimes = make([]time.Duration, totalSplits)
+
+// ANSI Color Escape Codes
+const (
+	Reset  = "\033[0m"
+	Red    = "\033[31m"
+	Green  = "\033[32m"
+	Yellow = "\033[33m"
+	Cyan   = "\033[36m"
+	Purple = "\033[35m"
+)
+
+func formatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	s := int(d.Seconds()) % 60
+	ms := int(d.Milliseconds()) % 1000
+	return fmt.Sprintf("%02d:%02d:%02d.%03d", h, m, s, ms)
+}
 
 func pt() {
-	h := int(elapsed.Hours())
-	m := int(elapsed.Minutes()) % 60
-	s := int(elapsed.Seconds()) % 60
-	ms := int(elapsed.Milliseconds()) % 1000
+	// Clear screen to redraw the full layout cleanly without trailing text
+	fmt.Print("\033[H\033[2J")
 
+	fmt.Println("============ SPEEDRUN SPLITS ============")
+	for i := 0; i < totalSplits; i++ {
+		splitName := fmt.Sprintf("Segment %d:", i+1)
+		bestStr := "NONE"
+		if bestTimes[i] > 0 {
+			bestStr = formatDuration(bestTimes[i])
+		}
+
+		if started && i == activeSplit {
+			// Highlights the currently active split
+			statusColor := Green
+			if paused {
+				statusColor = Yellow
+			}
+			fmt.Printf("%s %-10s Current: %s%s%s (Best: %s%s%s)\n",
+				statusColor, splitName, statusColor, formatDuration(elapsed), Reset, Purple, bestStr, Reset)
+		} else {
+			// Shows finished splits or upcoming splits
+			recordedStr := "--:--:--.--"
+			if splitTimes[i] > 0 {
+				recordedStr = formatDuration(splitTimes[i])
+			}
+			fmt.Printf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\n",
+				splitName, Cyan, recordedStr, Reset, Purple, bestStr, Reset)
+		}
+	}
+	fmt.Println("=========================================")
+
+	// Status Line Footer
 	if !started {
-		fmt.Printf("\rTimer: %02d:%02d:%02d.%03d, STOPPED", h, m, s, ms)
+		fmt.Printf("Status: %sSTOPPED / READY%s", Red, Reset)
 	} else if paused {
-		fmt.Printf("\rTimer: %02d:%02d:%02d.%03d, PAUSED ", h, m, s, ms)
+		fmt.Printf("Status: %sPAUSED (Next WASD starts Split %d)%s", Yellow, activeSplit+1, Reset)
 	} else {
-		fmt.Printf("\rTimer: %02d:%02d:%02d.%03d         ", h, m, s, ms)
+		fmt.Printf("Status: %sRUNNING%s", Green, Reset)
 	}
 }
+
 func main() {
 	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
@@ -47,7 +100,6 @@ func main() {
 		panic(err)
 	}
 
-	// Keep a single 10ms ticker for the UI/terminal updates
 	ticker := time.NewTicker(10 * time.Millisecond)
 	done := make(chan bool)
 
@@ -57,19 +109,12 @@ func main() {
 			case <-done:
 				return
 			case <-ticker.C:
-				// 1. If it's not started, or it's paused, we don't need to spam updates.
-				// We print the static state once and wait.
 				if !started || paused {
 					pt()
-
-					// To prevent this loop from spinning aggressively while paused,
-					// we just let the 10ms ticker tick, but you could also implement
-					// a condition variable or channel here if you want 0% CPU usage on pause.
 					continue
 				}
 
-				// 2. If actively running, update the elapsed time dynamically.
-				// time.Since() provides nanosecond precision regardless of the 10ms loop speed.
+				// Live update of current split
 				elapsed = accumulatedTime + time.Since(startTime)
 				pt()
 			}
@@ -82,35 +127,63 @@ func main() {
 			panic(err)
 		}
 
-		// Only trigger on key down/up event values depending on your needs,
-		// but checking key type here:
 		if ev.Event.Type == input.EV_KEY {
 			switch ev.Event.Code {
 			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
-				if ev.Event.Value == 1 { // Only trigger on Key Down
+				if ev.Event.Value == 1 { // Key Down
 					if !started {
+						// Hard Fresh Start from zero
 						started = true
 						paused = false
-						startTime = time.Now()
+						activeSplit = 0
+						elapsed = 0
 						accumulatedTime = 0
-					} else if paused {
-						// Unpausing: reset the baseline startTime to now
-						paused = false
+						for i := range splitTimes {
+							splitTimes[i] = 0
+						}
 						startTime = time.Now()
+					} else if paused {
+						// Unpausing: Move to NEXT split segment if we haven't maxed out
+						if activeSplit < totalSplits-1 {
+							activeSplit++
+							elapsed = 0
+							accumulatedTime = 0
+							paused = false
+							startTime = time.Now()
+						} else {
+							// If we completed all 5 segments, unpausing just resumes final segment time tracking
+							paused = false
+							startTime = time.Now()
+						}
 					}
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 1 {
 					started = false
 					paused = false
+					activeSplit = 0
 					accumulatedTime = 0
+					elapsed = 0
+					// Reset temporary session run times, keeping PB records intact
+					for i := range splitTimes {
+						splitTimes[i] = 0
+					}
 				}
 			case input.BTN_RIGHT:
-				if ev.Event.Value == 1 { // Only trigger on Click Down
+				if ev.Event.Value == 1 { // Click Down
 					if started && !paused {
 						paused = true
-						// Save the chunk of time passed since the last unpause/start
-						accumulatedTime += time.Since(startTime)
+
+						// Commit current accumulated run segment time
+						finalSegmentTime := accumulatedTime + time.Since(startTime)
+						accumulatedTime = finalSegmentTime
+						elapsed = finalSegmentTime
+						splitTimes[activeSplit] = finalSegmentTime
+
+						// Check and update Personal Best time for this specific segment
+						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
+							bestTimes[activeSplit] = finalSegmentTime
+						}
 					}
 				}
 			}
@@ -146,6 +219,3 @@ func click() {
 	send.Send(IMan.WireEvent{})
 	time.Sleep(150 * time.Millisecond)
 }
-
-// keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 300ms
-// kitty --class Mathbreakers -c /dev/null go run .
