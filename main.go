@@ -137,7 +137,7 @@ func pt() {
 			bestStr = formatDuration(bestTimes[i])
 		}
 
-		timeStr := "--:--:--.--"
+		timeStr := "--:--:--.---"
 		if started && i <= activeSplit || i < activeSplit {
 			timeStr = formatDuration(dispTime)
 		}
@@ -303,3 +303,23 @@ func click() {
 	send.Send(IMan.WireEvent{})
 	time.Sleep(150 * time.Millisecond)
 }
+
+// hl.window_rule({
+// 	name = "hjhhkMathasdbreakers",
+// 	match = {
+// 		class = "^Mathbreakers$",
+// 		-- title = "^kitten$",
+// 	},
+// 	pin = true,
+// 	float = true,
+// 	no_focus = true,
+// 	no_initial_focus = true,
+// 	size = { "480.0", "200" },
+// 	move = { "0", "30" },
+// 	opacity = "1 override",
+// 	border_size = 0,
+// })
+
+// kitty --class Mathbreakers -c /dev/null go run .
+
+// keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms
