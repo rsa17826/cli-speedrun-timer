@@ -19,6 +19,7 @@ socat -U - UNIX-CONNECT:"$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.soc
         lastActive=1
         keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms --modify e replace r &>/dev/null &
         # Write the new PID to the file so the main script/cleanup can see it
+        kill "$(cat "$PID_A_FILE")" 2>/dev/null
         echo $! >"$PID_A_FILE"
       fi
     else
