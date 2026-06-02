@@ -87,6 +87,7 @@ func loadBestTimes() {
 	if file, err := os.Open(ilPath); err == nil {
 		scanner := bufio.NewScanner(file)
 		i := 0
+		sob = 0
 		for scanner.Scan() && i < totalSplits {
 			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 				ilBestTimes[i] = time.Duration(ms) * time.Millisecond
