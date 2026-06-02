@@ -124,9 +124,9 @@ func pt() {
 	sb.WriteString("\033[H")
 
 	if ilMode > 0 {
-		sb.WriteString(fmt.Sprintf("============== INDIVIDUAL LEVEL (IL %d) ==============\n", ilMode))
+		sb.WriteString(fmt.Sprintf("=============== INDIVIDUAL LEVEL (IL %d) ===============\n", ilMode))
 	} else {
-		sb.WriteString("================== SPEEDRUN SPLITS ==================\n")
+		sb.WriteString("=================== SPEEDRUN SPLITS ===================\n")
 	}
 
 	var currentTotal time.Duration
@@ -177,13 +177,12 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (IL Best: %s%s%s)\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset))
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (IL Best: %s%s%s)\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset)
 	}
 
-	sb.WriteString("-----------------------------------------------------\033[K\n")
-
 	if ilMode == 0 {
+		sb.WriteString("-------------------------------------------------------\033[K\n")
 		totalColor := Cyan
 		if totalBest > 0 && started {
 			if currentTotal <= totalBest {
@@ -198,10 +197,10 @@ func pt() {
 			bestTotalStr = formatDuration(totalBest)
 		}
 
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s)\033[K",
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s)\033[K\n",
 			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset))
 	}
-	sb.WriteString("\n=====================================================\033[K\n")
+	sb.WriteString("=======================================================\033[K\n")
 
 	// Status Line Footer
 	if !started {
