@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strconv"
@@ -33,6 +34,7 @@ var startTime time.Time
 var accumulatedTime time.Duration // Tracks time accumulated across pauses for current split
 var elapsed time.Duration         // Tracks current live split time
 var totalBest time.Duration
+var sob time.Duration
 
 // Split Variables
 const totalSplits = 5
@@ -89,6 +91,7 @@ func loadBestTimes() {
 		for scanner.Scan() && i < totalSplits {
 			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 				ilBestTimes[i] = time.Duration(ms) * time.Millisecond
+				sob += ilBestTimes[i]
 			}
 			i++
 		}
@@ -147,7 +150,7 @@ func pad(text string, padChar string, totalSize int, bn bool) string {
 	return leftStr + text + rightStr
 }
 func pt() {
-	var size int = 78
+	var size int = 83
 	var sb strings.Builder
 	sb.WriteString("\033[H") // Return cursor to home
 
@@ -215,8 +218,13 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%s%s)\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset)
+		p := int32(math.Floor((float64(ilBestTimes[i]) / float64(fullRunBestTimes[i])) * 100.0))
+		pc := Red
+		if p == 100 {
+			pc = Green
+		}
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%s%s) %s%d%%%s\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset, pc, p, Reset)
 	}
 
 	if ilMode == 0 {
@@ -236,8 +244,8 @@ func pt() {
 			bestTotalStr = formatDuration(totalBest)
 		}
 
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s)\033[K\n",
-			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset))
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s) (SOB: %s%s%s)\033[K\n",
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, sob, Reset))
 	}
 	sb.WriteString(pad("", "=", size, false))
 	sb.WriteString("\033[K\n")
@@ -426,6 +434,18 @@ func main() {
 								saveFile("full")
 							}
 							ended = true
+						} else {
+							go func() {
+								time.Sleep(1500 * time.Millisecond)
+								moveMouse(1920/2, (1080/2)+75)
+								click()
+								time.Sleep(300 * time.Millisecond)
+								moveMouse(596, 223)
+								click()
+								moveMouse(levelPos[activeSplit+1][0], levelPos[activeSplit+1][1])
+								click()
+								moveMouse(1920/2, 1080/2)
+							}()
 						}
 					}
 				}
