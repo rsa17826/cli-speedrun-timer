@@ -219,7 +219,7 @@ func pt() {
 		}
 
 		p := int32(math.Floor((float64(ilBestTimes[i]) / float64(fullRunBestTimes[i])) * 100.0))
-		pc := Red
+		pc := Yellow
 		if p == 100 {
 			pc = Green
 		}
