@@ -505,7 +505,3 @@ func click() {
 // 	opacity = "1 override",
 // 	border_size = 0,
 // })
-
-// kitty --class Mathbreakers -c /dev/null go run .
-
-// keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms
