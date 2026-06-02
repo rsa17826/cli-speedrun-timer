@@ -15,7 +15,7 @@ socat -U - UNIX-CONNECT:"$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.soc
       if [[ $lastActive == 0 ]]; then
         hyprctl dispatch 'hl.dsp.window.tag({ tag = "-math_hide", window = "class:^Mathbreakers$" })'
         lastActive=1
-        keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms --modify e replace r &>/dev/null &
+        keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms --modify e replace r --modify 2 replace 6 --modify 3 replace 6 --modify 4 replace 6 &>/dev/null &
         # Write the new PID to the file so the main script/cleanup can see it
         id=$(cat "$PID_A_FILE")
         if [[ "$id" != 0 ]]; then
