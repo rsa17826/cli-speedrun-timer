@@ -44,7 +44,10 @@ cleanup() {
   echo "Cleaning up background tasks..."
   # Read the latest PID from the file to kill it
   if [[ -f "$PID_A_FILE" ]]; then
-    kill "$(cat "$PID_A_FILE")" 2>/dev/null
+    id=$(cat "$PID_A_FILE")
+    if [[ "$id" != 0 ]]; then
+      kill "$id" 2>/dev/null
+    fi
     rm -f "$PID_A_FILE"
   fi
   kill "$PID_S" 2>/dev/null
