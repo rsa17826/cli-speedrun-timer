@@ -128,15 +128,33 @@ func formatDuration(d time.Duration) string {
 	ms := int(d.Milliseconds()) % 1000
 	return fmt.Sprintf("%02d:%02d:%02d.%03d", h, m, s, ms)
 }
+func pad(text string, padChar string, totalSize int, bn bool) string {
+	if len(text) >= totalSize {
+		return text
+	}
 
+	totalPadding := totalSize - len(text)
+	leftPadding := totalPadding / 2
+	rightPadding := totalPadding - leftPadding
+
+	// Repeat the padding character to fill the spaces
+	leftStr := strings.Repeat(padChar, leftPadding)
+	rightStr := strings.Repeat(padChar, rightPadding)
+
+	if bn {
+		return leftStr + text + rightStr + "\n"
+	}
+	return leftStr + text + rightStr
+}
 func pt() {
+	var size int = 78
 	var sb strings.Builder
 	sb.WriteString("\033[H") // Return cursor to home
 
 	if ilMode > 0 {
-		sb.WriteString(fmt.Sprintf("=============== INDIVIDUAL LEVEL (IL %d) ===============\n", ilMode))
+		sb.WriteString(pad(fmt.Sprintf(" INDIVIDUAL LEVEL (IL %d) ", ilMode), "=", size, true))
 	} else {
-		sb.WriteString("=================== SPEEDRUN SPLITS ===================\n")
+		sb.WriteString(pad(" SPEEDRUN SPLITS ", "=", size, true))
 	}
 
 	var currentTotal time.Duration
@@ -202,7 +220,8 @@ func pt() {
 	}
 
 	if ilMode == 0 {
-		sb.WriteString("-------------------------------------------------------\033[K\n")
+		sb.WriteString(pad("", "-", size, false))
+		sb.WriteString("\033[K\n")
 		totalColor := Cyan
 		if totalBest > 0 && started {
 			if currentTotal <= totalBest {
@@ -220,7 +239,8 @@ func pt() {
 		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s)\033[K\n",
 			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset))
 	}
-	sb.WriteString("=======================================================\033[K\n")
+	sb.WriteString(pad("", "=", size, false))
+	sb.WriteString("\033[K\n")
 
 	// Status Line Footer
 	if !started {
