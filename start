@@ -4,8 +4,7 @@
 PID_A_FILE=$(mktemp)
 
 # 1. Start the key modifier and capture its Process ID (PID)
-keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms --modify e replace r &>/dev/null &
-echo $! >"$PID_A_FILE"
+echo 0 >"$PID_A_FILE"
 lastActive=0
 
 # 2. Start the Hyprland socket listener in the background
@@ -19,7 +18,10 @@ socat -U - UNIX-CONNECT:"$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.soc
         lastActive=1
         keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms --modify e replace r &>/dev/null &
         # Write the new PID to the file so the main script/cleanup can see it
-        kill "$(cat "$PID_A_FILE")" 2>/dev/null
+        id=$(cat "$PID_A_FILE")
+        if [[ "$id" != 0 ]]; then
+          kill "$id" 2>/dev/null
+        fi
         echo $! >"$PID_A_FILE"
       fi
     else
