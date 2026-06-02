@@ -37,11 +37,16 @@ var totalBest time.Duration
 // Split Variables
 const totalSplits = 5
 
-var filePath = "./times"
+// Separate persistent files for distinct category matching
+var fullRunPath = "./times_full_run"
+var ilPath = "./times_il_all"
 
 var activeSplit = 0
 var splitTimes = make([]time.Duration, totalSplits)
-var bestTimes = make([]time.Duration, totalSplits)
+
+// Distinct tracking arrays to print both contexts concurrently
+var fullRunBestTimes = make([]time.Duration, totalSplits)
+var ilBestTimes = make([]time.Duration, totalSplits)
 
 // IL Mode Config
 var ilMode int // 0 means standard full-run, 1-5 indicates specific IL split
@@ -57,52 +62,59 @@ const (
 	White  = "\033[37m"
 )
 
-// Load best times from file
+// Load records across both configurations
 func loadBestTimes() {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return // File doesn't exist yet, ignore
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	if ilMode > 0 {
-		if scanner.Scan() {
-			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
-			if err == nil {
-				bestTimes[ilMode-1] = time.Duration(ms) * time.Millisecond
-			}
-		}
-	} else {
+	// 1. Load Full Run Records
+	if file, err := os.Open(fullRunPath); err == nil {
+		scanner := bufio.NewScanner(file)
 		i := 0
-		for scanner.Scan() && i < totalSplits {
-			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
-			if err == nil {
-				bestTimes[i] = time.Duration(ms) * time.Millisecond
+		for i < totalSplits && scanner.Scan() {
+			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
+				fullRunBestTimes[i] = time.Duration(ms) * time.Millisecond
 			}
 			i++
 		}
-		// The line after individual splits stores the total best
 		if scanner.Scan() {
-			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
-			if err == nil {
+			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 				totalBest = time.Duration(ms) * time.Millisecond
 			}
 		}
+		file.Close()
+	}
+
+	// 2. Load Individual Level (IL) Records
+	if file, err := os.Open(ilPath); err == nil {
+		scanner := bufio.NewScanner(file)
+		i := 0
+		for scanner.Scan() && i < totalSplits {
+			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
+				ilBestTimes[i] = time.Duration(ms) * time.Millisecond
+			}
+			i++
+		}
+		file.Close()
 	}
 }
 
-// Save best times to file
-func saveBestTimes() {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	if ilMode > 0 {
-		fmt.Fprintf(file, "%d\n", bestTimes[ilMode-1].Milliseconds())
-	} else {
-		for _, t := range bestTimes {
+// Explicitly pass which type of file we are saving to decouple structural rules
+func saveFile(target string) {
+	switch target {
+	case "il":
+		file, err := os.Create(ilPath)
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		for _, t := range ilBestTimes {
+			fmt.Fprintf(file, "%d\n", t.Milliseconds())
+		}
+	case "full":
+		file, err := os.Create(fullRunPath)
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		for _, t := range fullRunBestTimes {
 			fmt.Fprintf(file, "%d\n", t.Milliseconds())
 		}
 		fmt.Fprintf(file, "%d\n", totalBest.Milliseconds())
@@ -119,9 +131,7 @@ func formatDuration(d time.Duration) string {
 
 func pt() {
 	var sb strings.Builder
-
-	// Move cursor to top-left corner (0,0) WITHOUT clearing the screen
-	sb.WriteString("\033[H")
+	sb.WriteString("\033[H") // Return cursor to home
 
 	if ilMode > 0 {
 		sb.WriteString(fmt.Sprintf("=============== INDIVIDUAL LEVEL (IL %d) ===============\n", ilMode))
@@ -137,15 +147,20 @@ func pt() {
 		}
 
 		splitName := fmt.Sprintf("Segment %d:", i+1)
-
 		var dispTime time.Duration
 		var segmentColor = Cyan
+
+		// Selection logic for target delta color indicators
+		targetCompareTime := fullRunBestTimes[i]
+		if ilMode > 0 {
+			targetCompareTime = ilBestTimes[i]
+		}
 
 		if i < activeSplit {
 			dispTime = splitTimes[i]
 			currentTotal += splitTimes[i]
-			if bestTimes[i] > 0 {
-				if dispTime <= bestTimes[i] {
+			if targetCompareTime > 0 {
+				if dispTime <= targetCompareTime {
 					segmentColor = Green
 				} else {
 					segmentColor = Red
@@ -154,8 +169,8 @@ func pt() {
 		} else if i == activeSplit && started {
 			dispTime = elapsed
 			currentTotal += elapsed
-			if bestTimes[i] > 0 {
-				if dispTime <= bestTimes[i] {
+			if targetCompareTime > 0 {
+				if dispTime <= targetCompareTime {
 					segmentColor = Green
 				} else {
 					segmentColor = Red
@@ -167,9 +182,14 @@ func pt() {
 			dispTime = 0
 		}
 
-		bestStr := "NONE"
-		if bestTimes[i] > 0 {
-			bestStr = formatDuration(bestTimes[i])
+		fullBestStr := "NONE"
+		if fullRunBestTimes[i] > 0 {
+			fullBestStr = formatDuration(fullRunBestTimes[i])
+		}
+
+		ilBestStr := "NONE"
+		if ilBestTimes[i] > 0 {
+			ilBestStr = formatDuration(ilBestTimes[i])
 		}
 
 		timeStr := "--:--:--.---"
@@ -177,8 +197,8 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (IL Best: %s%s%s)\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset)
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%s%s)\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset)
 	}
 
 	if ilMode == 0 {
@@ -239,9 +259,6 @@ func main() {
 	if ilMode < 0 || ilMode > 5 {
 		fmt.Println("Error: -il option must be between 1 and 5")
 		os.Exit(1)
-	}
-	if ilMode > 0 {
-		filePath = fmt.Sprintf("./times_il_%d", ilMode)
 	}
 
 	loadBestTimes()
@@ -320,16 +337,6 @@ func main() {
 					activeSplit = 0
 					accumulatedTime = 0
 					elapsed = 0
-					// go func() {
-					// 	bi = true
-					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-					// 	time.Sleep(20 * time.Millisecond)
-					// 	send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
-					// 	time.Sleep(20 * time.Millisecond)
-					// 	moveMouse(1920/2, (1080/2)+75)
-					// 	click()
-					// 	bi = false
-					// }()
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 0 {
@@ -377,25 +384,26 @@ func main() {
 						elapsed = finalSegmentTime
 						splitTimes[activeSplit] = finalSegmentTime
 
-						// Individual Level Mode Save Logic
+						// Evaluate and record IL performance regardless of current mode context
+						if ilBestTimes[activeSplit] == 0 || finalSegmentTime < ilBestTimes[activeSplit] {
+							ilBestTimes[activeSplit] = finalSegmentTime
+							saveFile("il") // Updates IL tracking file immediately on segment completion
+						}
+
 						if ilMode > 0 {
-							if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
-								bestTimes[activeSplit] = finalSegmentTime
-							}
 							ended = true
-							saveBestTimes()
 						} else if activeSplit == totalSplits-1 {
-							// Full Run Complete: calculate sum of all current segments
+							// Full Run Complete calculation
 							var totalRunTime time.Duration
 							for _, t := range splitTimes {
 								totalRunTime += t
 							}
 
-							// Save ALL splits ONLY if the overall total is better than totalBest (or if it's the first run)
+							// Save Full Run records if overall benchmark is surpassed
 							if totalBest == 0 || totalRunTime < totalBest {
 								totalBest = totalRunTime
-								copy(bestTimes, splitTimes)
-								saveBestTimes()
+								copy(fullRunBestTimes, splitTimes)
+								saveFile("full")
 							}
 							ended = true
 						}
@@ -486,19 +494,3 @@ func click() {
 	send.Send(IMan.WireEvent{})
 	time.Sleep(30 * time.Millisecond)
 }
-
-// hl.window_rule({
-// 	name = "hjhhkMathasdbreakers",
-// 	match = {
-// 		class = "^Mathbreakers$",
-// 		-- title = "^kitten$",
-// 	},
-// 	pin = true,
-// 	float = true,
-// 	no_focus = true,
-// 	no_initial_focus = true,
-// 	size = { "480.0", "200" },
-// 	move = { "0", "30" },
-// 	opacity = "1 override",
-// 	border_size = 0,
-// })
