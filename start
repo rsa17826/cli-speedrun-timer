@@ -3,7 +3,6 @@
 # Create a temporary file to keep track of PID_A across subshells
 PID_A_FILE=$(mktemp)
 
-# 1. Start the key modifier and capture its Process ID (PID)
 echo 0 >"$PID_A_FILE"
 lastActive=0
 

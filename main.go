@@ -32,6 +32,7 @@ var ended bool
 var startTime time.Time
 var accumulatedTime time.Duration // Tracks time accumulated across pauses for current split
 var elapsed time.Duration         // Tracks current live split time
+var totalBest time.Duration
 
 // Split Variables
 const totalSplits = 5
@@ -81,6 +82,13 @@ func loadBestTimes() {
 			}
 			i++
 		}
+		// The line after individual splits stores the total best
+		if scanner.Scan() {
+			ms, err := strconv.ParseInt(scanner.Text(), 10, 64)
+			if err == nil {
+				totalBest = time.Duration(ms) * time.Millisecond
+			}
+		}
 	}
 }
 
@@ -97,6 +105,7 @@ func saveBestTimes() {
 		for _, t := range bestTimes {
 			fmt.Fprintf(file, "%d\n", t.Milliseconds())
 		}
+		fmt.Fprintf(file, "%d\n", totalBest.Milliseconds())
 	}
 }
 
@@ -109,8 +118,6 @@ func formatDuration(d time.Duration) string {
 }
 
 func pt() {
-	// Use a StringBuilder to buffer the output into a single write operation.
-	// This prevents the terminal from rendering line-by-line.
 	var sb strings.Builder
 
 	// Move cursor to top-left corner (0,0) WITHOUT clearing the screen
@@ -123,7 +130,6 @@ func pt() {
 	}
 
 	var currentTotal time.Duration
-	var bestTotal time.Duration
 
 	for i := range totalSplits {
 		if ilMode > 0 && i != ilMode-1 {
@@ -131,7 +137,6 @@ func pt() {
 		}
 
 		splitName := fmt.Sprintf("Segment %d:", i+1)
-		bestTotal += bestTimes[i]
 
 		var dispTime time.Duration
 		var segmentColor = Cyan
@@ -172,9 +177,7 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		// Added \033[K at the end of the line to clear any residual characters
-		// from previous prints if a line suddenly gets shorter.
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\033[K\n",
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (IL Best: %s%s%s)\033[K\n",
 			splitName, segmentColor, timeStr, Reset, Purple, bestStr, Reset))
 	}
 
@@ -182,8 +185,8 @@ func pt() {
 
 	if ilMode == 0 {
 		totalColor := Cyan
-		if bestTotal > 0 && started {
-			if currentTotal <= bestTotal {
+		if totalBest > 0 && started {
+			if currentTotal <= totalBest {
 				totalColor = Green
 			} else {
 				totalColor = Red
@@ -191,11 +194,11 @@ func pt() {
 		}
 
 		bestTotalStr := "NONE"
-		if bestTotal > 0 {
-			bestTotalStr = formatDuration(bestTotal)
+		if totalBest > 0 {
+			bestTotalStr = formatDuration(totalBest)
 		}
 
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best: %s%s%s)\033[K",
+		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s)\033[K",
 			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset))
 	}
 	sb.WriteString("\n=====================================================\033[K\n")
@@ -213,20 +216,15 @@ func pt() {
 		sb.WriteString(fmt.Sprintf("Status: %sRUNNING%s", Green, Reset))
 	}
 
-	// Clear any leftover lines below the UI just in case the UI shrunk
 	sb.WriteString("\033[J")
-
-	// Print everything to the screen in ONE shot
 	fmt.Print(sb.String())
 }
 
 var bi bool
 
 func main() {
-	// Hide the cursor immediately
 	fmt.Print("\033[?25l")
 
-	// Standard cleanup: Ensure the cursor comes back if the user hits Ctrl+C
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGINT)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -235,11 +233,10 @@ func main() {
 		fmt.Print("\033[?25h")
 		os.Exit(0)
 	}()
-	// Parse CLI inputs
+
 	flag.IntVar(&ilMode, "il", 0, "Run a single Individual Level (1-5). Standard mode if 0.")
 	flag.Parse()
 
-	// Adjust file paths to prevent overwriting Full Run times during an IL run
 	if ilMode < 0 || ilMode > 5 {
 		fmt.Println("Error: -il option must be between 1 and 5")
 		os.Exit(1)
@@ -294,7 +291,6 @@ func main() {
 						started = true
 						paused = false
 
-						// If IL Mode is active, offset activeSplit to the selected level
 						if ilMode > 0 {
 							activeSplit = ilMode - 1
 						} else {
@@ -308,7 +304,6 @@ func main() {
 						}
 						startTime = time.Now()
 					} else if paused {
-						// In IL mode, pausing implies the run is complete, do not advance splits.
 						if ilMode == 0 {
 							activeSplit++
 							elapsed = 0
@@ -350,12 +345,8 @@ func main() {
 					}
 					read.BlockInput(0)
 					go func() {
-						// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 1, Type: input.EV_KEY})
-						// time.Sleep(20 * time.Millisecond)
-						// send.Send(IMan.WireEvent{Code: input.KEY_ESC, Value: 0, Type: input.EV_KEY})
 						time.Sleep(20 * time.Millisecond)
 						bi = true
-						// time.Sleep(2000 * time.Millisecond)
 						moveMouse(1920/2, (1080/2)+75)
 						click()
 						time.Sleep(300 * time.Millisecond)
@@ -368,7 +359,6 @@ func main() {
 						}
 						click()
 						moveMouse(1920/2, 1080/2)
-						// time.Sleep(2000 * time.Millisecond)
 						bi = false
 					}()
 					loadBestTimes()
@@ -388,20 +378,28 @@ func main() {
 						elapsed = finalSegmentTime
 						splitTimes[activeSplit] = finalSegmentTime
 
-						// Save PB for the active segment
-						if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
-							bestTimes[activeSplit] = finalSegmentTime
-						}
-
-						// End the speedrun if full run hits limit OR if we are in single IL mode
-						if ilMode > 0 || activeSplit == totalSplits-1 {
+						// Individual Level Mode Save Logic
+						if ilMode > 0 {
+							if bestTimes[activeSplit] == 0 || finalSegmentTime < bestTimes[activeSplit] {
+								bestTimes[activeSplit] = finalSegmentTime
+							}
 							ended = true
 							saveBestTimes()
+						} else if activeSplit == totalSplits-1 {
+							// Full Run Complete: calculate sum of all current segments
+							var totalRunTime time.Duration
+							for _, t := range splitTimes {
+								totalRunTime += t
+							}
+
+							// Save ALL splits ONLY if the overall total is better than totalBest (or if it's the first run)
+							if totalBest == 0 || totalRunTime < totalBest {
+								totalBest = totalRunTime
+								copy(bestTimes, splitTimes)
+								saveBestTimes()
+							}
+							ended = true
 						}
-						// else {
-						// 	level += 1
-						// 	playLevel(level)
-						// }
 					}
 				}
 			}
