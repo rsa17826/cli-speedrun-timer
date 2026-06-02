@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"math"
 	"os"
 	"os/signal"
 	"strconv"
@@ -181,23 +180,27 @@ func pt() {
 			dispTime = splitTimes[i]
 			currentTotal += splitTimes[i]
 			if targetCompareTime > 0 {
-				if dispTime <= targetCompareTime {
-					segmentColor = Green
-				} else {
+				if dispTime > targetCompareTime {
 					segmentColor = Red
+				} else if dispTime > ilBestTimes[i] {
+					segmentColor = Yellow
+				} else {
+					segmentColor = Green
 				}
 			}
 		} else if i == activeSplit && started {
 			dispTime = elapsed
 			currentTotal += elapsed
 			if targetCompareTime > 0 {
-				if dispTime <= targetCompareTime {
-					segmentColor = Green
-				} else {
+				if dispTime > targetCompareTime {
 					segmentColor = Red
+				} else if dispTime > ilBestTimes[i] {
+					segmentColor = Yellow
+				} else {
+					segmentColor = Green
 				}
 			} else {
-				segmentColor = Yellow
+				segmentColor = Cyan
 			}
 		} else {
 			dispTime = 0
@@ -218,7 +221,7 @@ func pt() {
 			timeStr = formatDuration(dispTime)
 		}
 
-		p := int32(math.Floor((float64(ilBestTimes[i]) / float64(fullRunBestTimes[i])) * 100.0))
+		p := int((float64(ilBestTimes[i]) / float64(fullRunBestTimes[i])) * 100.0)
 		pc := Yellow
 		if p == 100 {
 			pc = Green
@@ -244,8 +247,13 @@ func pt() {
 			bestTotalStr = formatDuration(totalBest)
 		}
 
-		sb.WriteString(fmt.Sprintf("  %-10s Time: %s%-12s%s (Best Total: %s%s%s) (SOB: %s%s%s)\033[K\n",
-			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, sob, Reset))
+		p := int((float64(sob) / float64(totalBest)) * 100.0)
+		pc := Yellow
+		if p == 100 {
+			pc = Green
+		}
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Best Total: %s%s%s) (SOB: %s%s%s) %s%d%%%s\033[K\n",
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, formatDuration(sob), Reset, pc, p, Reset)
 	}
 	sb.WriteString(pad("", "=", size, false))
 	sb.WriteString("\033[K\n")
@@ -436,7 +444,7 @@ func main() {
 							ended = true
 						} else {
 							go func() {
-								time.Sleep(1500 * time.Millisecond)
+								time.Sleep(400 * time.Millisecond)
 								moveMouse(1920/2, (1080/2)+75)
 								click()
 								time.Sleep(300 * time.Millisecond)
