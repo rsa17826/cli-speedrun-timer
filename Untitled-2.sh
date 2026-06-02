@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# 1. Start the key modifier and capture its Process ID (PID)
+keyModifier --modify space turbo downFor 20ms delay 20ms --modify space maxPressTime 350ms &>/dev/null &
+PID_A=$!
+
+# 2. Start the Hyprland socket listener to toggle transparency dynamically
+socat -U - UNIX-CONNECT:"$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock" | while read -r line; do
+    if [[ "$line" == *"activewindow"* ]]; then
+        # Fetch the currently active window's class
+        active=$(hyprctl activewindow -j | jq -r .class)
+
+        if [[ "$active" == "mathbreakers.exe" ]]; then
+            # Target the window by its class dynamically inside the eval
+            hyprctl eval 'hl.dsp.window.set_prop({window = "class:^Mathbreakers$", prop = "alphaoverride", value = "1"})'
+        else
+            hyprctl eval 'hl.dsp.window.set_prop({window = "class:^Mathbreakers$", prop = "alphaoverride", value = "0"})'
+        fi
+    fi
+done &
+PID_S=$!
+
+# 3. Launch your application in kitty and capture its PID
+kitty --class Mathbreakers -c /dev/null go run . &
+PID_D=$!
+
+# 4. Cleanup function to kill background processes cleanly when this script exits
+cleanup() {
+    echo "Cleaning up background tasks..."
+    kill "$PID_A" 2>/dev/null
+    kill "$PID_S" 2>/dev/null
+    kill "$PID_D" 2>/dev/null
+}
+
+# Trap exit signals (like Ctrl+C or script completion) to trigger cleanup
+trap cleanup EXIT
+
+# Keep the script alive so the trap stays active while background tasks run
+wait
