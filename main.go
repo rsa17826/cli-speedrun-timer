@@ -615,10 +615,6 @@ func main() {
 					loadBestTimes()
 					continue
 				}
-			case input.KEY_J:
-				if ev.Event.Value == 1 {
-					go moveMouse(0, 0)
-				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
 					levelEnded()
