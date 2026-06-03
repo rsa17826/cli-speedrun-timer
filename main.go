@@ -4,13 +4,19 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
 )
@@ -277,8 +283,167 @@ func pt() {
 }
 
 var bi bool
+var onmb bool
 
+// State tracking structure
+type WindowTracker struct {
+	mu          sync.Mutex
+	LastActive  bool
+	modifierCmd *exec.Cmd
+	pidFile     string
+}
+
+func (wt *WindowTracker) listenToHyprland() {
+	// Fetch Hyprland environment variables
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	instanceSig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
+	if runtimeDir == "" || instanceSig == "" {
+		fmt.Fprintln(os.Stderr, "Error: Missing Hyprland environment variables.")
+		return
+	}
+
+	socketPath := fmt.Sprintf("%s/hypr/%s/.socket2.sock", runtimeDir, instanceSig)
+
+	// Connect to the Unix socket
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error connecting to socket: %v\n", err)
+		return
+	}
+	defer conn.Close()
+
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Hyprland socket2 emits "activewindow>>class,title"
+		if after, ok := strings.CutPrefix(line, "activewindow>>"); ok {
+			// Extract the class name (everything after 'activewindow>>' and before the first comma)
+			payload := after
+			parts := strings.Split(payload, ",")
+			if len(parts) == 0 {
+				continue
+			}
+			activeClass := parts[0]
+
+			wt.mu.Lock()
+			if activeClass == "mathbreakers.exe" {
+				if !wt.LastActive {
+					wt.handleWindowActive()
+					wt.LastActive = true
+				}
+			} else {
+				if wt.LastActive {
+					wt.handleWindowInactive()
+					wt.LastActive = false
+				}
+			}
+			wt.mu.Unlock()
+		}
+	}
+}
+
+func (wt *WindowTracker) handleWindowActive() {
+	// 1. Dispatch Hyprland command to untag window
+	exec.Command("hyprctl", "dispatch", "hl.dsp.window.tag({ tag = \"-math_hide\", window = \"class:^Mathbreakers$\" })").Run()
+
+	// 2. Kill the previous keyModifier if it's still running
+	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+		wt.modifierCmd.Process.Kill()
+	}
+
+	// 3. Start keyModifier background process
+	// Adjust the arguments into distinct slice elements
+	wt.modifierCmd = exec.Command("keyModifier",
+		"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
+		"--modify", "space", "maxPressTime", "350ms",
+		"--modify", "e", "replace", "r",
+		"--modify", "2", "replace", "6",
+		"--modify", "3", "replace", "6",
+		"--modify", "4", "replace", "6",
+	)
+
+	if err := wt.modifierCmd.Start(); err == nil {
+		// Save PID to file for backward compatibility with your other script utilities
+		_ = os.WriteFile(wt.pidFile, fmt.Appendf(nil, "%d", wt.modifierCmd.Process.Pid), 0644)
+	}
+}
+func levelEnded() {
+	if started && !paused && !ended {
+		paused = true
+
+		finalSegmentTime := accumulatedTime + time.Since(startTime)
+		accumulatedTime = finalSegmentTime
+		elapsed = finalSegmentTime
+		splitTimes[activeSplit] = finalSegmentTime
+
+		// Evaluate and record IL performance regardless of current mode context
+		if ilBestTimes[activeSplit] == 0 || finalSegmentTime < ilBestTimes[activeSplit] {
+			ilBestTimes[activeSplit] = finalSegmentTime
+			saveFile("il") // Updates IL tracking file immediately on segment completion
+		}
+
+		if ilMode > 0 {
+			ended = true
+		} else if activeSplit == totalSplits-1 {
+			// Full Run Complete calculation
+			var totalRunTime time.Duration
+			for _, t := range splitTimes {
+				totalRunTime += t
+			}
+
+			// Save Full Run records if overall benchmark is surpassed
+			if totalBest == 0 || totalRunTime < totalBest {
+				totalBest = totalRunTime
+				copy(fullRunBestTimes, splitTimes)
+				saveFile("full")
+			}
+			ended = true
+		} else {
+			go func() {
+				time.Sleep(400 * time.Millisecond)
+				moveMouse(1920/2, (1080/2)+75)
+				click()
+				time.Sleep(300 * time.Millisecond)
+				moveMouse(596, 223)
+				click()
+				moveMouse(levelPos[activeSplit+1][0], levelPos[activeSplit+1][1])
+				click()
+				moveMouse(1920/2, 1080/2)
+			}()
+		}
+	}
+}
+func (wt *WindowTracker) handleWindowInactive() {
+	// 1. Dispatch Hyprland command to tag window
+	exec.Command("hyprctl", "dispatch", "hl.dsp.window.tag({ tag = \"+math_hide\", window = \"class:^Mathbreakers$\" })").Run()
+
+	// 2. Kill the modifier process
+	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+		wt.modifierCmd.Process.Kill()
+		wt.modifierCmd = nil
+	}
+	_ = os.WriteFile(wt.pidFile, []byte("0"), 0644)
+}
+
+func (wt *WindowTracker) cleanup() {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+		wt.modifierCmd.Process.Kill()
+	}
+	os.Remove(wt.pidFile)
+}
 func main() {
+	var err error
+	// Setup your tracker state
+	tracker := &WindowTracker{
+		pidFile: "/tmp/mathbreakers_pid_a", // Replaces your mktemp file
+	}
+	defer tracker.cleanup()
+
+	go tracker.listenToHyprland()
+
 	fmt.Print("\033[?25l")
 
 	c := make(chan os.Signal, 1)
@@ -297,11 +462,50 @@ func main() {
 		fmt.Println("Error: -il option must be between 1 and 5")
 		os.Exit(1)
 	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatalf("Failed to create watcher: %v", err)
+	}
+	defer watcher.Close()
 
+	// 2. Define the directory and target file you are looking for
+	watchDir := "/data/games/mathbreakers"
+	targetFile := "level_cleared.txt"
+
+	// Start a goroutine to handle incoming file system events
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Has(fsnotify.Create) {
+					if filepath.Base(event.Name) == targetFile {
+						levelEnded()
+					}
+				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Printf("Watcher error: %v", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(watchDir)
+	if err != nil {
+		log.Fatalf("Failed to add directory to watcher: %v", err)
+	}
 	loadBestTimes()
 
-	var err error
 	read, err = IMan.Connect(IMan.ModeBlocking)
+	if err != nil {
+		panic(err)
+	}
 	send, err = IMan.Connect(IMan.ModeInjection)
 	if err != nil {
 		panic(err)
@@ -332,7 +536,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-
+		if !tracker.LastActive {
+			read.BlockInput(0)
+			continue
+		}
 		if ev.Event.Type == input.EV_KEY {
 			switch ev.Event.Code {
 			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
@@ -413,50 +620,7 @@ func main() {
 				}
 			case input.BTN_RIGHT:
 				if ev.Event.Value == 1 { // Click Down
-					if started && !paused && !ended {
-						paused = true
-
-						finalSegmentTime := accumulatedTime + time.Since(startTime)
-						accumulatedTime = finalSegmentTime
-						elapsed = finalSegmentTime
-						splitTimes[activeSplit] = finalSegmentTime
-
-						// Evaluate and record IL performance regardless of current mode context
-						if ilBestTimes[activeSplit] == 0 || finalSegmentTime < ilBestTimes[activeSplit] {
-							ilBestTimes[activeSplit] = finalSegmentTime
-							saveFile("il") // Updates IL tracking file immediately on segment completion
-						}
-
-						if ilMode > 0 {
-							ended = true
-						} else if activeSplit == totalSplits-1 {
-							// Full Run Complete calculation
-							var totalRunTime time.Duration
-							for _, t := range splitTimes {
-								totalRunTime += t
-							}
-
-							// Save Full Run records if overall benchmark is surpassed
-							if totalBest == 0 || totalRunTime < totalBest {
-								totalBest = totalRunTime
-								copy(fullRunBestTimes, splitTimes)
-								saveFile("full")
-							}
-							ended = true
-						} else {
-							go func() {
-								time.Sleep(400 * time.Millisecond)
-								moveMouse(1920/2, (1080/2)+75)
-								click()
-								time.Sleep(300 * time.Millisecond)
-								moveMouse(596, 223)
-								click()
-								moveMouse(levelPos[activeSplit+1][0], levelPos[activeSplit+1][1])
-								click()
-								moveMouse(1920/2, 1080/2)
-							}()
-						}
-					}
+					levelEnded()
 				}
 			}
 		}
