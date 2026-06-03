@@ -472,7 +472,6 @@ func main() {
 	watchDir := "/data/games/mathbreakers"
 	targetFile := "level_cleared.txt"
 
-	// Start a goroutine to handle incoming file system events
 	go func() {
 		for {
 			select {
@@ -484,6 +483,8 @@ func main() {
 				if event.Has(fsnotify.Create) {
 					if filepath.Base(event.Name) == targetFile {
 						levelEnded()
+						time.Sleep(50 * time.Millisecond)
+						os.Remove(event.Name)
 					}
 				}
 
