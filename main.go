@@ -261,15 +261,15 @@ func pt() {
 
 	// Status Line Footer
 	if !started {
-		sb.WriteString(fmt.Sprintf("Status: %sSTOPPED / READY%s", White, Reset))
+		fmt.Fprintf(&sb, "Status: %sSTOPPED / READY%s", White, Reset)
 	} else if paused {
 		nextText := fmt.Sprintf("Split %d", activeSplit+2)
 		if ilMode > 0 {
 			nextText = "Done"
 		}
-		sb.WriteString(fmt.Sprintf("Status: %sPAUSED (Next WASD starts %s)%s", Yellow, nextText, Reset))
+		fmt.Fprintf(&sb, "Status: %sPAUSED (Next WASD starts %s)%s", Yellow, nextText, Reset)
 	} else {
-		sb.WriteString(fmt.Sprintf("Status: %sRUNNING%s", Green, Reset))
+		fmt.Fprintf(&sb, "Status: %sRUNNING%s", Green, Reset)
 	}
 
 	sb.WriteString("\033[J")
