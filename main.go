@@ -471,7 +471,7 @@ func main() {
 	// 2. Define the directory and target file you are looking for
 	watchDir := "/data/games/mathbreakers"
 	targetFile := "level_cleared.txt"
-
+	_ = os.Remove(watchDir + "/" + targetFile)
 	go func() {
 		for {
 			select {
