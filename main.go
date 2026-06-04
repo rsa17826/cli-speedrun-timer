@@ -361,6 +361,8 @@ func (wt *WindowTracker) handleWindowActive() {
 		"--modify", "2", "replace", "6",
 		"--modify", "3", "replace", "6",
 		"--modify", "4", "replace", "6",
+		"--modify", "f", "replace", "j",
+		"--modify", "rbutton", "replace", "j",
 	)
 
 	if err := wt.modifierCmd.Start(); err == nil {
@@ -615,10 +617,10 @@ func main() {
 					loadBestTimes()
 					continue
 				}
-			case input.BTN_RIGHT:
-				if ev.Event.Value == 1 { // Click Down
-					levelEnded()
-				}
+				// case input.BTN_RIGHT:
+				// 	if ev.Event.Value == 1 { // Click Down
+				// 		levelEnded()
+				// 	}
 			}
 		}
 		if bi {
