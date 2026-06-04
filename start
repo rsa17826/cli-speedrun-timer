@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-kitty --class Mathbreakers -c /dev/null go run . "$@"
+kitty --class Mathbreakers -c /dev/null -o "shell_integration=disabled" go run . "$@"

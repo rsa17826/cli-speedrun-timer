@@ -361,8 +361,9 @@ func (wt *WindowTracker) handleWindowActive() {
 		"--modify", "2", "replace", "6",
 		"--modify", "3", "replace", "6",
 		"--modify", "4", "replace", "6",
+		"--modify", "rbutton", "turbo", "downFor", "1ms", "delay", "1ms",
 		"--modify", "f", "replace", "j",
-		"--modify", "rbutton", "replace", "j",
+		"--modify", "rbutton", "replace", "k",
 	)
 
 	if err := wt.modifierCmd.Start(); err == nil {
@@ -406,7 +407,7 @@ func levelEnded() {
 				time.Sleep(400 * time.Millisecond)
 				moveMouse(1920/2, (1080/2)+75)
 				click()
-				time.Sleep(300 * time.Millisecond)
+				time.Sleep(350 * time.Millisecond)
 				moveMouse(596, 223)
 				click()
 				moveMouse(levelPos[activeSplit+1][0], levelPos[activeSplit+1][1])
@@ -602,7 +603,7 @@ func main() {
 						bi = true
 						moveMouse(1920/2, (1080/2)+75)
 						click()
-						time.Sleep(300 * time.Millisecond)
+						time.Sleep(350 * time.Millisecond)
 						moveMouse(596, 223)
 						click()
 						if ilMode > 0 {
