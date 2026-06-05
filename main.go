@@ -40,6 +40,7 @@ var accumulatedTime time.Duration // Tracks time accumulated across pauses for c
 var elapsed time.Duration         // Tracks current live split time
 var totalBest time.Duration
 var sob time.Duration
+var wrSob time.Duration // Track World Record Sum of Bests
 
 // Split Variables
 const totalSplits = 5
@@ -47,6 +48,7 @@ const totalSplits = 5
 // Separate persistent files for distinct category matching
 var fullRunPath = "./times_full_run"
 var ilPath = "./times_il_all"
+var wrPath = "./wrs"
 
 var activeSplit = 0
 var splitTimes = make([]time.Duration, totalSplits)
@@ -54,6 +56,7 @@ var splitTimes = make([]time.Duration, totalSplits)
 // Distinct tracking arrays to print both contexts concurrently
 var fullRunBestTimes = make([]time.Duration, totalSplits)
 var ilBestTimes = make([]time.Duration, totalSplits)
+var wrTimes = make([]time.Duration, totalSplits)
 
 // IL Mode Config
 var ilMode int // 0 means standard full-run, 1-5 indicates specific IL split
@@ -69,7 +72,7 @@ const (
 	White  = "\033[37m"
 )
 
-// Load records across both configurations
+// Load records across configurations including World Records
 func loadBestTimes() {
 	// 1. Load Full Run Records
 	if file, err := os.Open(fullRunPath); err == nil {
@@ -98,6 +101,21 @@ func loadBestTimes() {
 			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 				ilBestTimes[i] = time.Duration(ms) * time.Millisecond
 				sob += ilBestTimes[i]
+			}
+			i++
+		}
+		file.Close()
+	}
+
+	// 3. Load World Records (WR)
+	if file, err := os.Open(wrPath); err == nil {
+		scanner := bufio.NewScanner(file)
+		i := 0
+		wrSob = 0
+		for scanner.Scan() && i < totalSplits {
+			if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
+				wrTimes[i] = time.Duration(ms) * time.Millisecond
+				wrSob += wrTimes[i]
 			}
 			i++
 		}
@@ -137,6 +155,7 @@ func formatDuration(d time.Duration) string {
 	ms := int(d.Milliseconds()) % 1000
 	return fmt.Sprintf("%02d:%02d:%02d.%03d", h, m, s, ms)
 }
+
 func pad(text string, padChar string, totalSize int, bn bool) string {
 	if len(text) >= totalSize {
 		return text
@@ -146,7 +165,6 @@ func pad(text string, padChar string, totalSize int, bn bool) string {
 	leftPadding := totalPadding / 2
 	rightPadding := totalPadding - leftPadding
 
-	// Repeat the padding character to fill the spaces
 	leftStr := strings.Repeat(padChar, leftPadding)
 	rightStr := strings.Repeat(padChar, rightPadding)
 
@@ -155,8 +173,9 @@ func pad(text string, padChar string, totalSize int, bn bool) string {
 	}
 	return leftStr + text + rightStr
 }
+
 func pt() {
-	var size int = 83
+	var size int = 104
 	var sb strings.Builder
 	sb.WriteString("\033[H") // Return cursor to home
 
@@ -177,7 +196,6 @@ func pt() {
 		var dispTime time.Duration
 		var segmentColor = Cyan
 
-		// Selection logic for target delta color indicators
 		targetCompareTime := fullRunBestTimes[i]
 		if ilMode > 0 {
 			targetCompareTime = ilBestTimes[i]
@@ -223,6 +241,11 @@ func pt() {
 			ilBestStr = formatDuration(ilBestTimes[i])
 		}
 
+		wrStr := "NONE"
+		if wrTimes[i] > 0 {
+			wrStr = formatDuration(wrTimes[i])
+		}
+
 		timeStr := "--:--:--.---"
 		if started && i <= activeSplit || i < activeSplit {
 			timeStr = formatDuration(dispTime)
@@ -233,8 +256,8 @@ func pt() {
 		if p == 100 {
 			pc = Green
 		}
-		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%s%s) %s%d%%%s\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset, pc, p, Reset)
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%-12s%s     WR: %s%s%s) %s%d%%%s\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset, Red, wrStr, Reset, pc, p, Reset)
 	}
 
 	if ilMode == 0 {
@@ -259,8 +282,8 @@ func pt() {
 		if p == 100 {
 			pc = Green
 		}
-		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Best Total: %s%s%s) (SOB: %s%s%s) %s%d%%%s\033[K\n",
-			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, formatDuration(sob), Reset, pc, p, Reset)
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Best Total: %s%-12s%s) (SOB: %s%-12s%s WR SOB: %s%s%s) %s%d%%%s\033[K\n",
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, formatDuration(sob), Reset, Red, formatDuration(wrSob), Reset, pc, p, Reset)
 	}
 	sb.WriteString(pad("", "=", size, false))
 	sb.WriteString("\033[K\n")
@@ -285,7 +308,6 @@ func pt() {
 var bi bool
 var onmb bool
 
-// State tracking structure
 type WindowTracker struct {
 	mu          sync.Mutex
 	LastActive  bool
@@ -294,7 +316,6 @@ type WindowTracker struct {
 }
 
 func (wt *WindowTracker) listenToHyprland() {
-	// Fetch Hyprland environment variables
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	instanceSig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
 	if runtimeDir == "" || instanceSig == "" {
@@ -304,7 +325,6 @@ func (wt *WindowTracker) listenToHyprland() {
 
 	socketPath := fmt.Sprintf("%s/hypr/%s/.socket2.sock", runtimeDir, instanceSig)
 
-	// Connect to the Unix socket
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error connecting to socket: %v\n", err)
@@ -316,9 +336,7 @@ func (wt *WindowTracker) listenToHyprland() {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Hyprland socket2 emits "activewindow>>class,title"
 		if after, ok := strings.CutPrefix(line, "activewindow>>"); ok {
-			// Extract the class name (everything after 'activewindow>>' and before the first comma)
 			payload := after
 			parts := strings.Split(payload, ",")
 			if len(parts) == 0 {
@@ -344,33 +362,30 @@ func (wt *WindowTracker) listenToHyprland() {
 }
 
 func (wt *WindowTracker) handleWindowActive() {
-	// 1. Dispatch Hyprland command to untag window
 	exec.Command("hyprctl", "dispatch", "hl.dsp.window.tag({ tag = \"-math_hide\", window = \"class:^Mathbreakers$\" })").Run()
 
-	// 2. Kill the previous keyModifier if it's still running
 	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
 		wt.modifierCmd.Process.Kill()
 	}
 
-	// 3. Start keyModifier background process
-	// Adjust the arguments into distinct slice elements
 	wt.modifierCmd = exec.Command("keyModifier",
 		"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
 		"--modify", "space", "maxPressTime", "350ms",
 		"--modify", "e", "replace", "r",
 		"--modify", "2", "replace", "6",
 		"--modify", "3", "replace", "6",
-		"--modify", "4", "replace", "6",
+		"--modify", "4", "replace", "j",
+		"--modify", "4", "turbo",
 		"--modify", "rbutton", "turbo", "downFor", "1ms", "delay", "1ms",
 		"--modify", "f", "replace", "j",
 		"--modify", "rbutton", "replace", "k",
 	)
 
 	if err := wt.modifierCmd.Start(); err == nil {
-		// Save PID to file for backward compatibility with your other script utilities
 		_ = os.WriteFile(wt.pidFile, fmt.Appendf(nil, "%d", wt.modifierCmd.Process.Pid), 0644)
 	}
 }
+
 func levelEnded() {
 	if started && !paused && !ended {
 		paused = true
@@ -380,22 +395,19 @@ func levelEnded() {
 		elapsed = finalSegmentTime
 		splitTimes[activeSplit] = finalSegmentTime
 
-		// Evaluate and record IL performance regardless of current mode context
 		if ilBestTimes[activeSplit] == 0 || finalSegmentTime < ilBestTimes[activeSplit] {
 			ilBestTimes[activeSplit] = finalSegmentTime
-			saveFile("il") // Updates IL tracking file immediately on segment completion
+			saveFile("il")
 		}
 
 		if ilMode > 0 {
 			ended = true
 		} else if activeSplit == totalSplits-1 {
-			// Full Run Complete calculation
 			var totalRunTime time.Duration
 			for _, t := range splitTimes {
 				totalRunTime += t
 			}
 
-			// Save Full Run records if overall benchmark is surpassed
 			if totalBest == 0 || totalRunTime < totalBest {
 				totalBest = totalRunTime
 				copy(fullRunBestTimes, splitTimes)
@@ -417,11 +429,10 @@ func levelEnded() {
 		}
 	}
 }
+
 func (wt *WindowTracker) handleWindowInactive() {
-	// 1. Dispatch Hyprland command to tag window
 	exec.Command("hyprctl", "dispatch", "hl.dsp.window.tag({ tag = \"+math_hide\", window = \"class:^Mathbreakers$\" })").Run()
 
-	// 2. Kill the modifier process
 	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
 		wt.modifierCmd.Process.Kill()
 		wt.modifierCmd = nil
@@ -437,11 +448,11 @@ func (wt *WindowTracker) cleanup() {
 	}
 	os.Remove(wt.pidFile)
 }
+
 func main() {
 	var err error
-	// Setup your tracker state
 	tracker := &WindowTracker{
-		pidFile: "/tmp/mathbreakers_pid_a", // Replaces your mktemp file
+		pidFile: "/tmp/mathbreakers_pid_a",
 	}
 	defer tracker.cleanup()
 
@@ -471,7 +482,6 @@ func main() {
 	}
 	defer watcher.Close()
 
-	// 2. Define the directory and target file you are looking for
 	watchDir := "/data/games/mathbreakers"
 	targetFile := "level_cleared.txt"
 	_ = os.Remove(watchDir + "/" + targetFile)
@@ -547,7 +557,7 @@ func main() {
 		if ev.Event.Type == input.EV_KEY {
 			switch ev.Event.Code {
 			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
-				if ev.Event.Value == 1 { // Key Down
+				if ev.Event.Value == 1 {
 					if ended {
 						continue
 					}
@@ -618,10 +628,6 @@ func main() {
 					loadBestTimes()
 					continue
 				}
-				// case input.BTN_RIGHT:
-				// 	if ev.Event.Value == 1 { // Click Down
-				// 		levelEnded()
-				// 	}
 			}
 		}
 		if bi {
