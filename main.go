@@ -380,7 +380,7 @@ func (wt *WindowTracker) handleWindowActive() {
 
 	wt.modifierCmd = exec.Command("keyModifier",
 		"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
-		"--modify", "space", "maxPressTime", "350ms",
+		"--modify", "space", "maxPressTime", "650ms",
 		"--modify", "e", "replace", "r",
 		"--modify", "2", "replace", "6",
 		"--modify", "3", "replace", "6",
@@ -395,6 +395,8 @@ func (wt *WindowTracker) handleWindowActive() {
 		// "--modify", "rbutton", "turbo", "downFor", "1ms", "delay", "1ms",
 		"--modify", "f", "replace", "j",
 		"--modify", "rbutton", "replace", "r",
+		"--modify", "lbutton", "turbo", "downFor", "5ms", "delay", "5ms",
+		"--modify", "lbutton", "maxPressTime", "180ms",
 	)
 
 	if err := wt.modifierCmd.Start(); err == nil {
@@ -629,7 +631,9 @@ func main() {
 						bi = true
 						moveMouse(1920/2, (1080/2)+75)
 						click()
-						time.Sleep(350 * time.Millisecond)
+						moveMouse(735, 963)
+						click()
+						time.Sleep(400 * time.Millisecond)
 						moveMouse(596, 223)
 						click()
 						if ilMode > 0 {
@@ -639,6 +643,14 @@ func main() {
 						}
 						click()
 						moveMouse(1920/2, 1080/2)
+						time.Sleep(800 * time.Millisecond)
+						err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: 1})
+						err = send.Send(IMan.WireEvent{})
+						for range 10 {
+							time.Sleep(10 * time.Millisecond)
+							err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: 1})
+							err = send.Send(IMan.WireEvent{})
+						}
 						bi = false
 					}()
 					loadBestTimes()
