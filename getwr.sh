@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-curl -L -b /d/docs.google.com_cookies.txt "https://docs.google.com/spreadsheets/d/1BKP3F13UTYMQZccQqDsOU-ck1Qi5x8qSucwMfIO5LnE/export?format=csv" -o spreadsheet.csv
+t=$(mktemp)
+python getCookies.py >"$t"
+curl -L -b "$t" "https://docs.google.com/spreadsheets/d/1BKP3F13UTYMQZccQqDsOU-ck1Qi5x8qSucwMfIO5LnE/export?format=csv" -o spreadsheet.csv
+rm "$t"
 CSV_FILE="./spreadsheet.csv"
 OUTPUT_FILE="./wrs"
 
@@ -46,8 +49,7 @@ NR % 3 == 1 {
             sec_part = time_val
         }
 
-        # Strip trailing text like .xxx if present, replace with .000
-        gsub(/xxx/, "000", sec_part)
+        gsub(/xxx/, "999", sec_part)
 
         split(sec_part, s_parts, ".")
         sec = s_parts[1]

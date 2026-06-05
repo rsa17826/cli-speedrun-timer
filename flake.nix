@@ -10,7 +10,6 @@
 
   outputs =
     {
-      self,
       nixpkgs,
       flake-utils,
       ...
@@ -33,11 +32,9 @@
         ];
         pythonEnv = pkgs.python313.withPackages (
           ps: with ps; [
-            pynput
-            pywayland
+            browser-cookie3
           ]
         );
-
       in
       {
         packages = {

@@ -1,0 +1,23 @@
+python3 -c "
+def unity_hash(key):
+  h = 5381
+  for c in key:
+      h = ((h << 5) + h) ^ ord(c)
+      h &= 0xFFFFFFFF
+  return h
+
+# Verify against known keys from the registry
+tests = [
+  ('unlockall', 963284052),
+  ('unlockedLevel1', 2813590931),
+  ('unlockedLevel2', 2813590928),
+]
+print('Verification:')
+for k, expected in tests:
+  result = unity_hash(k)
+  print(f'  {k} -> {result} (expected {expected}) {\"OK\" if result == expected else \"MISMATCH\"}')
+
+print()
+target = 'BonusWeapon1Unlocked'
+print(f'Hash for \"{target}\": h{unity_hash(target)}')
+"

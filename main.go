@@ -386,9 +386,15 @@ func (wt *WindowTracker) handleWindowActive() {
 		"--modify", "3", "replace", "6",
 		"--modify", "4", "replace", "j",
 		"--modify", "4", "turbo",
-		"--modify", "rbutton", "turbo", "downFor", "1ms", "delay", "1ms",
+		"--modify", "e", "turbo", "downFor", "5ms", "delay", "5ms",
+		"--modify", "e", "maxPressTime", "20ms",
+		"--modify", "r", "turbo", "downFor", "5ms", "delay", "5ms",
+		"--modify", "r", "maxPressTime", "20ms",
+		"--modify", "rbutton", "turbo", "downFor", "5ms", "delay", "5ms",
+		"--modify", "rbutton", "maxPressTime", "20ms",
+		// "--modify", "rbutton", "turbo", "downFor", "1ms", "delay", "1ms",
 		"--modify", "f", "replace", "j",
-		"--modify", "rbutton", "replace", "k",
+		"--modify", "rbutton", "replace", "r",
 	)
 
 	if err := wt.modifierCmd.Start(); err == nil {
