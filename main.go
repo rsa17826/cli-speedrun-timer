@@ -262,7 +262,7 @@ func pt() {
 			wrpc = Green
 		}
 		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s %s%d%%%s IL Best: %s%-12s%s WR: %s%s%s %s%d%%%s)\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, wrpc, wrp, Reset, Purple, ilBestStr, Reset, Red, wrStr, Reset, pc, p, Reset)
+			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, pc, p, Reset, Purple, ilBestStr, Reset, Red, wrStr, Reset, wrpc, wrp, Reset)
 	}
 
 	if ilMode == 0 {
