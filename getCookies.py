@@ -1,28 +1,40 @@
 import time
-from evdev import UInput, ecodes as e
+import browser_cookie3
 
-def move_mouse_absolute(x, y):
-  # Create a virtual mouse capabilities layout
-  cap = {
-    e.EV_REL: [e.REL_X, e.REL_Y],
-    e.EV_KEY: [e.BTN_LEFT, e.BTN_RIGHT]
-  }
+try:
+  cj = browser_cookie3.brave()
 
-  # Initialize the virtual device
-  with UInput(cap, name='virtual-mouse') as ui:
-    # Give the OS half a second to register the new virtual device
-    time.sleep(0.5)
+  # Netscape format files require this specific header line
+  print("# Netscape HTTP Cookie File")
+  print("# http://curl.haxx.se/rfc/cookie_spec.html")
+  print("# This is a generated file!  Do not edit.\n")
 
-    # Step 1: Force the cursor to (0, 0) by moving it by an extreme negative amount
-    ui.write(e.EV_REL, e.REL_X, -10000)
-    ui.write(e.EV_REL, e.REL_Y, -10000)
-    ui.syn()
+  for cookie in cj:
+    if cookie.domain.endswith(".google.com") and len(cookie.name) != 32:
 
-    # Step 2: Move relatively from (0,0) to your target destination
-    ui.write(e.EV_REL, e.REL_X, x)
-    ui.write(e.EV_REL, e.REL_Y, y)
-    ui.syn()
+      # 1. Domain (Netscape format traditionally expects subdomains to start with a dot)
+      # browser_cookie3 usually preserves this, but we can ensure consistency
+      domain = cookie.domain
 
-if __name__ == "__main__":
-  print("Moving mouse to (150, 150)...")
-  move_mouse_absolute(150, 150)
+      # 2. Flag (True if domain starts with a dot, meaning it matches subdomains)
+      flag = "TRUE" if domain.startswith(".") else "FALSE"
+
+      # 3. Path
+      path = cookie.path or "/"
+
+      # 4. Secure flag
+      secure = "TRUE" if cookie.secure else "FALSE"
+
+      # 5. Expiration (Default to 0 if None/Session cookie)
+      expiry = str(cookie.expires) if cookie.expires is not None else "0"
+
+      # 6 & 7. Name and Value
+      name = cookie.name
+      value = cookie.value
+
+      # Print tab-separated values
+      print(f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}")
+
+except Exception as e:
+  import sys
+  print(f"# Error reading cookies: {e}", file=sys.stderr)
