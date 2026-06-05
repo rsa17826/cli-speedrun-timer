@@ -256,8 +256,13 @@ func pt() {
 		if p == 100 {
 			pc = Green
 		}
-		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%-12s%s     WR: %s%s%s) %s%d%%%s\033[K\n",
-			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset, Red, wrStr, Reset, pc, p, Reset)
+		wrp := int((float64(wrTimes[i]) / float64(ilBestTimes[i])) * 100.0)
+		wrpc := Yellow
+		if wrp == 100 {
+			wrpc = Green
+		}
+		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s IL Best: %s%-12s%s %s%d%%%s WR: %s%s%s) %s%d%%%s\033[K\n",
+			splitName, segmentColor, timeStr, Reset, Purple, fullBestStr, Reset, Purple, ilBestStr, Reset, wrpc, wrp, Reset, Red, wrStr, Reset, pc, p, Reset)
 	}
 
 	if ilMode == 0 {
