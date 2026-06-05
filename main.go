@@ -257,7 +257,7 @@ func pt() {
 			pc = Green
 		}
 		wrp := int((float64(wrTimes[i]) / float64(ilBestTimes[i])) * 100.0)
-		wrpc := Yellow
+		wrpc := Red
 		if wrp == 100 {
 			wrpc = Green
 		}
@@ -288,12 +288,12 @@ func pt() {
 			pc = Green
 		}
 		wrp := int((float64(wrSob) / float64(sob)) * 100.0)
-		wrpc := Yellow
+		wrpc := Red
 		if wrp == 100 {
 			wrpc = Green
 		}
 		fmt.Fprintf(&sb, "  %-10s Time: %s%-12s%s (Best Total: %s%-12s%s) (SOB: %s%-12s%s %s%d%%%s WR: %s%s%s %s%d%%%s)\033[K\n",
-			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, formatDuration(sob), Reset, wrpc, wrp, Reset, Red, formatDuration(wrSob), Reset, pc, p, Reset)
+			"TOTAL:", totalColor, formatDuration(currentTotal), Reset, Purple, bestTotalStr, Reset, Purple, formatDuration(sob), Reset, pc, p, Reset, wrpc, formatDuration(wrSob), Reset, wrpc, wrp, Reset)
 	}
 	sb.WriteString(pad("", "=", size, false))
 	sb.WriteString("\033[K\n")
