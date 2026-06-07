@@ -178,21 +178,24 @@ func (a *App) handleEscape() {
 		case rs.ILMode > 0:
 			a.playLevel(rs.ILMode - 1) // playLevel is 0-indexed
 		case rs.NoReset:
-			a.playLevel(rs.Level)
+			if rs.Ended {
+				a.playLevel(0)
+			} else {
+				a.playLevel(rs.Level)
+			}
 		default:
 			a.playLevel(0)
 		}
 
-		a.blocking = true
-		time.Sleep(800 * time.Millisecond)
+		// a.blocking = true
+		// time.Sleep(800 * time.Millisecond)
 
-		// Nudge mouse to wake up cursor after level load.
-		for range 11 {
-			a.sendRel(input.REL_X, 1)
-			a.sendSync()
-			time.Sleep(10 * time.Millisecond)
-		}
-		a.blocking = false
+		// for range 11 {
+		// 	a.sendRel(input.REL_X, 1)
+		// 	a.sendSync()
+		// 	time.Sleep(10 * time.Millisecond)
+		// }
+		// a.blocking = false
 	}()
 
 	loadBestTimes(rs)

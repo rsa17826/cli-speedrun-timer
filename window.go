@@ -82,7 +82,7 @@ func (wt *WindowTracker) handleWindowActive() {
 
 	wt.modifierCmd = exec.Command("keyModifier",
 		"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
-		"--modify", "space", "maxPressTime", "650ms",
+		"--modify", "space", "maxPressTime", "600ms",
 		"--modify", "e", "replace", "r",
 		"--modify", "2", "replace", "6",
 		"--modify", "3", "replace", "6",
