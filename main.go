@@ -60,6 +60,7 @@ var wrTimes = make([]time.Duration, totalSplits)
 
 // IL Mode Config
 var ilMode int // 0 means standard full-run, 1-5 indicates specific IL split
+var nor bool   // no reset
 
 // ANSI Color Escape Codes
 const (
@@ -435,19 +436,22 @@ func levelEnded() {
 		} else {
 			go func() {
 				time.Sleep(400 * time.Millisecond)
-				moveMouse(1920/2, (1080/2)+75)
-				click()
+				cExitLevelBtn()
 				time.Sleep(350 * time.Millisecond)
-				moveMouse(596, 223)
-				click()
-				moveMouse(levelPos[activeSplit+1][0], levelPos[activeSplit+1][1])
-				click()
+				playLevel(activeSplit + 1)
 				moveMouse(1920/2, 1080/2)
 			}()
 		}
 	}
 }
-
+func cExitLevelBtn() {
+	moveMouse(1920/2, (1080/2)+75)
+	click()
+}
+func cPlayButton() {
+	moveMouse(596, 223)
+	click()
+}
 func (wt *WindowTracker) handleWindowInactive() {
 	exec.Command("hyprctl", "dispatch", "hl.dsp.window.tag({ tag = \"+math_hide\", window = \"class:^Mathbreakers$\" })").Run()
 
@@ -488,6 +492,7 @@ func main() {
 	}()
 
 	flag.IntVar(&ilMode, "il", 0, "Run a single Individual Level (1-5). Standard mode if 0.")
+	flag.BoolVar(&nor, "nor", false, "Run a single Individual Level (1-5). Standard mode if 0.")
 	flag.Parse()
 
 	if ilMode < 0 || ilMode > 5 {
@@ -616,33 +621,35 @@ func main() {
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 0 {
-					ended = false
-					started = false
-					paused = false
-					activeSplit = 0
-					accumulatedTime = 0
-					elapsed = 0
-					for i := range splitTimes {
-						splitTimes[i] = 0
+					if !(ilMode == 0 && nor) {
+						ended = false
+						started = false
+						paused = false
+						activeSplit = 0
+						accumulatedTime = 0
+						elapsed = 0
+						for i := range splitTimes {
+							splitTimes[i] = 0
+						}
 					}
 					read.BlockInput(0)
 					go func() {
 						time.Sleep(20 * time.Millisecond)
 						bi = true
-						moveMouse(1920/2, (1080/2)+75)
-						click()
+						cExitLevelBtn()
 						moveMouse(735, 963)
 						click()
 						time.Sleep(400 * time.Millisecond)
-						moveMouse(596, 223)
-						click()
 						if ilMode > 0 {
-							moveMouse(levelPos[ilMode-1][0], levelPos[ilMode-1][1])
+							playLevel(ilMode)
 						} else {
-							moveMouse(levelPos[0][0], levelPos[0][1])
+							if nor {
+								playLevel(level)
+							} else {
+								playLevel(0)
+							}
 						}
-						click()
-						moveMouse(1920/2, 1080/2)
+						bi = true
 						time.Sleep(800 * time.Millisecond)
 						err = send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_X, Value: 1})
 						err = send.Send(IMan.WireEvent{})
@@ -724,8 +731,7 @@ func moveMouse(x, y int32) {
 func playLevel(i int) {
 	bi = true
 	level = i
-	moveMouse(596, 223)
-	click()
+	cPlayButton()
 	moveMouse(levelPos[level][0], levelPos[level][1])
 	click()
 	moveMouse(1920/2, 1080/2)
