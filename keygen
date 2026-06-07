@@ -2,8 +2,8 @@ python3 -c "
 def unity_hash(key):
   h = 5381
   for c in key:
-      h = ((h << 5) + h) ^ ord(c)
-      h &= 0xFFFFFFFF
+    h = ((h << 5) + h) ^ ord(c)
+    h &= 0xFFFFFFFF
   return h
 
 # Verify against known keys from the registry
