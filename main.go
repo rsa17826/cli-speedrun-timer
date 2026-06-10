@@ -41,18 +41,26 @@ func main() {
 	defer app.tracker.cleanup()
 
 	var err error
-	app.read, err = IMan.Connect(IMan.ModeBlocking)
+	app.read, err = IMan.Connect("mathbreakers", IMan.ModeBlocking)
 	if err != nil {
 		log.Fatalf("Failed to connect input reader: %v", err)
 	}
-	app.send, err = IMan.Connect(IMan.ModeInjection)
+	app.send, err = IMan.Connect("mathbreakers", IMan.ModeInjection)
 	if err != nil {
 		log.Fatalf("Failed to connect input sender: %v", err)
 	}
 
 	// Hide terminal cursor for a clean display.
 	fmt.Print("\033[?25l")
-	go handleSignals()
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		<-c
+		fmt.Print("\033[?25h")
+		app.read.Close()
+		app.send.Close()
+		os.Exit(0)
+	}()
 
 	go app.tracker.listenToHyprland()
 
@@ -77,15 +85,6 @@ func main() {
 	}()
 
 	app.eventLoop()
-}
-
-// handleSignals restores the terminal cursor when the process exits.
-func handleSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
-	fmt.Print("\033[?25h")
-	os.Exit(0)
 }
 
 // eventLoop is the main input-processing loop.
