@@ -41,7 +41,7 @@ func main() {
 	defer app.tracker.cleanup()
 
 	var err error
-	app.read, err = IMan.Connect("mathbreakers", IMan.ModeBlocking)
+	app.read, err = IMan.Connect("mathbreakers", IMan.ModeFilter)
 	if err != nil {
 		log.Fatalf("Failed to connect input reader: %v", err)
 	}
@@ -97,7 +97,7 @@ func (a *App) eventLoop() {
 
 		// If the game window is not focused, pass all inputs through.
 		if !a.tracker.LastActive {
-			a.read.BlockInput(0)
+			a.read.BlockInput(ev.Event.Seq, 0)
 			continue
 		}
 
@@ -113,16 +113,16 @@ func (a *App) eventLoop() {
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 0 {
-					go a.handleEscape()
+					go a.handleEscape(ev.Event.Sec)
 					continue // skip the blocking check below; ESC already handled it
 				}
 			}
 		}
 
 		if a.blocking {
-			a.read.BlockInput(1)
+			a.read.BlockInput(ev.Event.Seq, 1)
 		} else {
-			a.read.BlockInput(0)
+			a.read.BlockInput(ev.Event.Seq, 0)
 		}
 	}
 }
@@ -158,12 +158,12 @@ func (a *App) handleMovementKey() {
 }
 
 // handleEscape navigates back to the level select and optionally resets the run.
-func (a *App) handleEscape() {
+func (a *App) handleEscape(seq uint64) {
 	rs := a.rs
 	if !(rs.ILMode == 0 && rs.NoReset) {
 		rs.Reset()
 	}
-	a.read.BlockInput(0)
+	a.read.BlockInput(seq, 0)
 
 	go func() {
 		time.Sleep(20 * time.Millisecond)
