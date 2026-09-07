@@ -113,7 +113,8 @@ func (a *App) eventLoop() {
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 0 {
-					go a.handleEscape(ev.Event.Sec)
+					a.read.BlockInput(ev.Event.Seq, 0)
+					go a.handleEscape()
 					continue // skip the blocking check below; ESC already handled it
 				}
 			}
@@ -158,12 +159,11 @@ func (a *App) handleMovementKey() {
 }
 
 // handleEscape navigates back to the level select and optionally resets the run.
-func (a *App) handleEscape(seq uint64) {
+func (a *App) handleEscape() {
 	rs := a.rs
 	if !(rs.ILMode == 0 && rs.NoReset) {
 		rs.Reset()
 	}
-	a.read.BlockInput(seq, 0)
 
 	go func() {
 		time.Sleep(20 * time.Millisecond)
