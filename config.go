@@ -24,7 +24,7 @@ const (
 	FullRunPath = "./times_full_run"
 	ILPath      = "./times_il_all"
 	WRPath      = "./wrs"
-	WatchDir    = "/data/games/mathbreakers"
+	WatchDir    = "/home/nyix/projects/mathbreakers-ghost-speedrun-mod/mathbreakers"
 	TargetFile  = "level_cleared.txt"
 	PIDFile     = "/tmp/mathbreakers_pid_a"
 )
