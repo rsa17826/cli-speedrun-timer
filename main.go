@@ -169,6 +169,7 @@ func (a *App) handleEscape() {
 		time.Sleep(20 * time.Millisecond)
 		a.blocking = true
 		a.clickExitLevelButton()
+		time.Sleep(600 * time.Millisecond)
 		a.moveMouse(735, 963)
 		a.click()
 		time.Sleep(400 * time.Millisecond)
@@ -241,8 +242,11 @@ func (a *App) levelEnded() {
 		go func() {
 			time.Sleep(400 * time.Millisecond)
 			a.clickExitLevelButton()
-			time.Sleep(350 * time.Millisecond)
+			time.Sleep(600 * time.Millisecond)
 			a.playLevel(rs.ActiveSplit + 1)
+			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
+			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
+			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
 			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
 		}()
 	}

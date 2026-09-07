@@ -49,7 +49,6 @@ func (a *App) playLevel(i int) {
 	a.clickPlayButton()
 	a.moveMouse(LevelPositions[i][0], LevelPositions[i][1])
 	a.click()
-	a.moveMouse(ScreenWidth/2, ScreenHeight/2)
 	a.blocking = false
 }
 
