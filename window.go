@@ -58,7 +58,7 @@ func (wt *WindowTracker) listenToHyprland() {
 		activeClass := parts[0]
 
 		wt.mu.Lock()
-		isGame := activeClass == "mathbreakers.exe"
+		isGame := activeClass == "explorer.exe"
 		if isGame && !wt.LastActive {
 			wt.handleWindowActive()
 			wt.LastActive = true
@@ -73,46 +73,46 @@ func (wt *WindowTracker) listenToHyprland() {
 // handleWindowActive shows the game window and starts the key modifier process.
 func (wt *WindowTracker) handleWindowActive() {
 	exec.Command("hyprctl", "dispatch",
-		`hl.dsp.window.tag({ tag = "-math_hide", window = "class:^Mathbreakers$" })`).Run()
+		`hl.dsp.window.tag({ tag = "-HIDE", window = "class:^Mathbreakers$" })`).Run()
 
 	// Kill any existing modifier before starting a fresh one.
-	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
-		wt.modifierCmd.Process.Kill()
-	}
+	// if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+	// 	wt.modifierCmd.Process.Kill()
+	// }
 
-	wt.modifierCmd = exec.Command("keyModifier",
-		"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
-		"--modify", "space", "maxPressTime", "600ms",
-		"--modify", "e", "replace", "r",
-		"--modify", "2", "replace", "6",
-		"--modify", "3", "replace", "6",
-		"--modify", "4", "replace", "j",
-		"--modify", "4", "turbo",
-		"--modify", "e", "turbo", "downFor", "5ms", "delay", "5ms",
-		"--modify", "e", "maxPressTime", "20ms",
-		"--modify", "r", "turbo", "downFor", "5ms", "delay", "5ms",
-		"--modify", "r", "maxPressTime", "20ms",
-		"--modify", "rbutton", "turbo", "downFor", "5ms", "delay", "5ms",
-		"--modify", "rbutton", "maxPressTime", "20ms",
-		"--modify", "f", "replace", "j",
-		"--modify", "rbutton", "replace", "r",
-	)
+	// wt.modifierCmd = exec.Command("keyModifier",
+	// 	"--modify", "space", "turbo", "downFor", "20ms", "delay", "20ms",
+	// 	"--modify", "space", "maxPressTime", "600ms",
+	// 	"--modify", "e", "replace", "r",
+	// 	"--modify", "2", "replace", "6",
+	// 	"--modify", "3", "replace", "6",
+	// 	"--modify", "4", "replace", "j",
+	// 	"--modify", "4", "turbo",
+	// 	"--modify", "e", "turbo", "downFor", "5ms", "delay", "5ms",
+	// 	"--modify", "e", "maxPressTime", "20ms",
+	// 	"--modify", "r", "turbo", "downFor", "5ms", "delay", "5ms",
+	// 	"--modify", "r", "maxPressTime", "20ms",
+	// 	"--modify", "rbutton", "turbo", "downFor", "5ms", "delay", "5ms",
+	// 	"--modify", "rbutton", "maxPressTime", "20ms",
+	// 	"--modify", "f", "replace", "j",
+	// 	"--modify", "rbutton", "replace", "r",
+	// )
 
-	if err := wt.modifierCmd.Start(); err == nil {
-		_ = os.WriteFile(wt.pidFile, fmt.Appendf(nil, "%d", wt.modifierCmd.Process.Pid), 0644)
-	}
+	// if err := wt.modifierCmd.Start(); err == nil {
+	// 	_ = os.WriteFile(wt.pidFile, fmt.Appendf(nil, "%d", wt.modifierCmd.Process.Pid), 0644)
+	// }
 }
 
 // handleWindowInactive hides the game window and kills the key modifier.
 func (wt *WindowTracker) handleWindowInactive() {
 	exec.Command("hyprctl", "dispatch",
-		`hl.dsp.window.tag({ tag = "+math_hide", window = "class:^Mathbreakers$" })`).Run()
+		`hl.dsp.window.tag({ tag = "+HIDE", window = "class:^TIMER$" })`).Run()
 
-	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
-		wt.modifierCmd.Process.Kill()
-		wt.modifierCmd = nil
-	}
-	_ = os.WriteFile(wt.pidFile, []byte("0"), 0644)
+	// if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+	// 	wt.modifierCmd.Process.Kill()
+	// 	wt.modifierCmd = nil
+	// }
+	// _ = os.WriteFile(wt.pidFile, []byte("0"), 0644)
 }
 
 // cleanup kills any running modifier and removes the PID file.
@@ -120,8 +120,8 @@ func (wt *WindowTracker) handleWindowInactive() {
 func (wt *WindowTracker) cleanup() {
 	wt.mu.Lock()
 	defer wt.mu.Unlock()
-	if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
-		wt.modifierCmd.Process.Kill()
-	}
-	os.Remove(wt.pidFile)
+	// if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
+	// 	wt.modifierCmd.Process.Kill()
+	// }
+	// os.Remove(wt.pidFile)
 }

@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-kitty --class Mathbreakers -c /dev/null -o "shell_integration=disabled" go run . "$@"
+if command -v request-windowrule &>/dev/null; then
+  request-windowrule ./windowrules.lua
+else
+  echo "request-windowrule not installed" >&2
+fi
+
+# kitty --class TIMER -o "shell_integration=disabled" go run . "$@"
+kitty --class TIMER -c /dev/null -o "shell_integration=disabled" go run . "$@"
