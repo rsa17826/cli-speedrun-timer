@@ -2,7 +2,7 @@ import time
 import browser_cookie3
 
 try:
-  cj = browser_cookie3.brave()
+  cj = browser_cookie3.chrome(cookie_file="/home/nyix/.config/net.imput.helium/Default/Cookies")
 
   # Netscape format files require this specific header line
   print("# Netscape HTTP Cookie File")
