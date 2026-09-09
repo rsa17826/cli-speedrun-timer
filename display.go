@@ -134,7 +134,7 @@ func pctColor(num, denom time.Duration, normalColor string) (int, string) {
 		return 0, normalColor
 	}
 	p := int(float64(num) / float64(denom) * 100.0)
-	if p == 100 {
+	if p >= 100 {
 		return p, Green
 	}
 	return p, normalColor
