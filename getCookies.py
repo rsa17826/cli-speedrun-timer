@@ -11,7 +11,6 @@ try:
 
   for cookie in cj:
     if cookie.domain.endswith(".google.com") and len(cookie.name) != 32:
-
       # 1. Domain (Netscape format traditionally expects subdomains to start with a dot)
       # browser_cookie3 usually preserves this, but we can ensure consistency
       domain = cookie.domain
@@ -35,6 +34,9 @@ try:
       # Print tab-separated values
       print(f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}")
 
+
+
 except Exception as e:
   import sys
+
   print(f"# Error reading cookies: {e}", file=sys.stderr)

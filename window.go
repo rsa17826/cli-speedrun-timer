@@ -73,7 +73,7 @@ func (wt *WindowTracker) listenToHyprland() {
 // handleWindowActive shows the game window and starts the key modifier process.
 func (wt *WindowTracker) handleWindowActive() {
 	exec.Command("hyprctl", "dispatch",
-		`hl.dsp.window.tag({ tag = "-HIDE", window = "class:^Mathbreakers$" })`).Run()
+		`hl.dsp.window.tag({ tag = "-HIDE", window = "class:^TIMER$" })`).Run()
 
 	// Kill any existing modifier before starting a fresh one.
 	// if wt.modifierCmd != nil && wt.modifierCmd.Process != nil {
