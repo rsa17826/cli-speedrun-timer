@@ -38,7 +38,6 @@ func main() {
 		rs:      rs,
 		tracker: NewWindowTracker(),
 	}
-	defer app.tracker.cleanup()
 
 	var err error
 	app.read, err = IMan.Connect("mathbreakers", IMan.ModeFilter)
@@ -115,7 +114,23 @@ func (a *App) eventLoop() {
 				if ev.Event.Value == 0 {
 					a.read.BlockInput(ev.Event.Seq, 0)
 					go a.handleEscape()
-					continue // skip the blocking check below; ESC already handled it
+					continue
+				}
+			case input.BTN_RIGHT:
+				if ev.Event.Value == 1 {
+					print(a.rs.ActiveSplit)
+					if a.rs.ActiveSplit == 4 {
+						a.read.BlockInput(ev.Event.Seq, 1)
+						a.send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_WHEEL, Value: 1})
+					} else {
+						a.read.BlockInput(ev.Event.Seq, 1)
+						go func() {
+							a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.KEY_R, Value: 1})
+							time.Sleep(40 * time.Millisecond)
+							a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.KEY_R, Value: 0})
+						}()
+					}
+					continue
 				}
 			}
 		}
