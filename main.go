@@ -113,7 +113,8 @@ func (a *App) eventLoop() {
 			case input.KEY_ESC:
 				if ev.Event.Value == 1 {
 					a.read.BlockInput(ev.Event.Seq, 1)
-					go a.handleEscape()
+					a.handleEscape()
+					// go a.handleEscape()
 					continue
 				}
 			case input.BTN_RIGHT:
@@ -180,38 +181,38 @@ func (a *App) handleEscape() {
 		rs.Reset()
 	}
 
-	go func() {
-		// time.Sleep(20 * time.Millisecond)
-		// a.blocking = true
-		// a.clickExitLevelButton()
-		// time.Sleep(600 * time.Millisecond)
-		// a.moveMouse(735, 963)
-		// a.click()
-		// time.Sleep(400 * time.Millisecond)
+	// go func() {
+	// time.Sleep(20 * time.Millisecond)
+	// a.blocking = true
+	// a.clickExitLevelButton()
+	// time.Sleep(600 * time.Millisecond)
+	// a.moveMouse(735, 963)
+	// a.click()
+	// time.Sleep(400 * time.Millisecond)
 
-		switch {
-		case rs.ILMode > 0:
-			a.playLevel(rs.ILMode - 1) // playLevel is 0-indexed
-		case rs.NoReset:
-			if rs.Ended {
-				a.playLevel(0)
-			} else {
-				a.playLevel(rs.Level)
-			}
-		default:
+	switch {
+	case rs.ILMode > 0:
+		a.playLevel(rs.ILMode - 1) // playLevel is 0-indexed
+	case rs.NoReset:
+		if rs.Ended {
 			a.playLevel(0)
+		} else {
+			a.playLevel(rs.Level)
 		}
+	default:
+		a.playLevel(0)
+	}
 
-		// a.blocking = true
-		// time.Sleep(800 * time.Millisecond)
+	// a.blocking = true
+	// time.Sleep(800 * time.Millisecond)
 
-		// for range 11 {
-		// 	a.sendRel(input.REL_X, 1)
-		// 	a.sendSync()
-		// 	time.Sleep(10 * time.Millisecond)
-		// }
-		// a.blocking = false
-	}()
+	// for range 11 {
+	// 	a.sendRel(input.REL_X, 1)
+	// 	a.sendSync()
+	// 	time.Sleep(10 * time.Millisecond)
+	// }
+	// a.blocking = false
+	// }()
 
 	loadBestTimes(rs)
 }

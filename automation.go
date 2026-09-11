@@ -47,13 +47,13 @@ func (a *App) click() {
 
 // playLevel navigates to and launches the given level index.
 func (a *App) playLevel(i int) {
-	a.blocking = true
+	// a.blocking = true
 	a.rs.Level = i
 	os.WriteFile(path.Join(WatchDir, "mode"), []byte(strconv.Itoa(i)), 0644)
 	// a.clickPlayButton()
 	// a.moveMouse(LevelPositions[i][0], LevelPositions[i][1])
 	// a.click()
-	a.blocking = false
+	// a.blocking = false
 }
 
 // clickExitLevelButton clicks the in-level exit/return button.
