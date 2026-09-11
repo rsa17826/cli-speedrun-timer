@@ -111,7 +111,7 @@ func (a *App) eventLoop() {
 					a.rs.Reset()
 				}
 			case input.KEY_ESC:
-				if ev.Event.Value == 0 {
+				if ev.Event.Value == 1 {
 					a.read.BlockInput(ev.Event.Seq, 1)
 					go a.handleEscape()
 					continue
