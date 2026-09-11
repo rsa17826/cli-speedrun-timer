@@ -112,7 +112,7 @@ func (a *App) eventLoop() {
 				}
 			case input.KEY_ESC:
 				if ev.Event.Value == 0 {
-					a.read.BlockInput(ev.Event.Seq, 0)
+					a.read.BlockInput(ev.Event.Seq, 1)
 					go a.handleEscape()
 					continue
 				}
@@ -181,13 +181,13 @@ func (a *App) handleEscape() {
 	}
 
 	go func() {
-		time.Sleep(20 * time.Millisecond)
-		a.blocking = true
-		a.clickExitLevelButton()
-		time.Sleep(600 * time.Millisecond)
-		a.moveMouse(735, 963)
-		a.click()
-		time.Sleep(400 * time.Millisecond)
+		// time.Sleep(20 * time.Millisecond)
+		// a.blocking = true
+		// a.clickExitLevelButton()
+		// time.Sleep(600 * time.Millisecond)
+		// a.moveMouse(735, 963)
+		// a.click()
+		// time.Sleep(400 * time.Millisecond)
 
 		switch {
 		case rs.ILMode > 0:
@@ -255,7 +255,7 @@ func (a *App) levelEnded() {
 	} else {
 		// Auto-advance to the next level after a short delay.
 		go func() {
-			time.Sleep(800 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 			a.playLevel(rs.ActiveSplit + 1)
 		}()
 	}

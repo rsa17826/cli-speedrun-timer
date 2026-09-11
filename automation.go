@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"path"
+	"strconv"
 	"time"
 
 	input "github.com/rsa17826/go-input-lib"
@@ -46,9 +49,10 @@ func (a *App) click() {
 func (a *App) playLevel(i int) {
 	a.blocking = true
 	a.rs.Level = i
-	a.clickPlayButton()
-	a.moveMouse(LevelPositions[i][0], LevelPositions[i][1])
-	a.click()
+	os.WriteFile(path.Join(WatchDir, "mode"), []byte(strconv.Itoa(i)), 0644)
+	// a.clickPlayButton()
+	// a.moveMouse(LevelPositions[i][0], LevelPositions[i][1])
+	// a.click()
 	a.blocking = false
 }
 
