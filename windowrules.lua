@@ -31,7 +31,7 @@ timer_visible:set_enabled(false)
 timer_hidden:set_enabled(true)
 
 hl.on("window.active", function(w)
-	if w.class == "explorer.exe" then
+	if w and w.class == "explorer.exe" then
 		timer_hidden:set_enabled(false)
 		timer_visible:set_enabled(true)
 	else

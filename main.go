@@ -255,14 +255,8 @@ func (a *App) levelEnded() {
 	} else {
 		// Auto-advance to the next level after a short delay.
 		go func() {
-			time.Sleep(400 * time.Millisecond)
-			a.clickExitLevelButton()
-			time.Sleep(600 * time.Millisecond)
+			time.Sleep(800 * time.Millisecond)
 			a.playLevel(rs.ActiveSplit + 1)
-			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
-			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
-			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
-			a.moveMouse(ScreenWidth/2, ScreenHeight/2)
 		}()
 	}
 }

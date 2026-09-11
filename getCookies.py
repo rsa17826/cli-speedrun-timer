@@ -1,4 +1,3 @@
-import time
 import browser_cookie3
 
 try:
