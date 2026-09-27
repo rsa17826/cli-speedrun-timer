@@ -28,10 +28,22 @@ func (a *App) setupWatcher() (*fsnotify.Watcher, error) {
 				if !ok {
 					return
 				}
-				if event.Has(fsnotify.Create) && filepath.Base(event.Name) == TargetFile {
-					a.levelEnded()
-					time.Sleep(50 * time.Millisecond)
-					os.Remove(event.Name)
+				if event.Has(fsnotify.Create) {
+					if filepath.Base(event.Name) == TargetFile {
+						a.levelEnded()
+						time.Sleep(50 * time.Millisecond)
+						os.Remove(event.Name)
+					}
+					if filepath.Base(event.Name) == "levelWasReset" {
+						rs := a.rs
+						if !(rs.ILMode == 0 && rs.NoReset) {
+							rs.Reset()
+						}
+
+						loadBestTimes(rs)
+						time.Sleep(50 * time.Millisecond)
+						os.Remove(event.Name)
+					}
 				}
 
 			case err, ok := <-watcher.Errors:

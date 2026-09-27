@@ -58,7 +58,7 @@ func (wt *WindowTracker) listenToHyprland() {
 		activeClass := parts[0]
 
 		wt.mu.Lock()
-		isGame := activeClass == "explorer.exe"
+		isGame := activeClass == "mathbreakers.exe"
 		if isGame && !wt.LastActive {
 			wt.LastActive = true
 		} else if !isGame && wt.LastActive {
