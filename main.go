@@ -177,7 +177,7 @@ func (a *App) handleMovementKey() {
 // handleEscape navigates back to the level select and optionally resets the run.
 func (a *App) handleEscape() {
 	rs := a.rs
-	if !(rs.ILMode == 0 && rs.NoReset) {
+	if !(rs.ILMode == 0 && (rs.NoReset && rs.Level != 0)) {
 		rs.Reset()
 	}
 
