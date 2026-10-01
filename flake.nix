@@ -42,7 +42,7 @@
             pname = "timer";
             version = "1";
             src = ./.;
-            vendorHash = "sha256-La87Fu3YogYSe3FCR3W1Je4dwOpM7YIuMO+JNkASNYM=";
+            vendorHash = "sha256-N0GUAp4Q7ooV7ovv9rxJB8yHkmnOlwRicT0cGl53AVU=";
             # Tools needed at build-time (host)
             proxyVendor = true;
             nativeBuildInputs = [ pkgs.pkg-config ];

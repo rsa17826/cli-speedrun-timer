@@ -79,7 +79,7 @@ func main() {
 			if rs.Started && !rs.Paused {
 				rs.Elapsed = rs.AccumulatedTime + time.Since(rs.StartTime)
 			}
-			Render(rs)
+			// Render(rs)
 		}
 	}()
 

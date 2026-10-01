@@ -12,26 +12,34 @@ import (
 
 // moveMouse moves the hardware mouse cursor to absolute screen coordinates
 // by first resetting to (0,0) then moving in two steps for precision.
-func (a *App) moveMouse(x, y int32) {
-	// Reset to top-left corner.
-	a.sendRel(input.REL_X, -9999)
-	a.sendSync()
-	a.sendRel(input.REL_Y, -9999)
-	a.sendSync()
-	time.Sleep(10 * time.Millisecond)
+func (a *App) sendAbs(code uint16, value int32) {
+	if err := a.send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: code, Value: value}); err != nil {
+		panic(err)
+	}
+}
 
-	a.sendRel(input.REL_X, -10000)
-	a.sendSync()
-	a.sendRel(input.REL_Y, -10000)
-	a.sendSync()
-	time.Sleep(10 * time.Millisecond)
+const layoutW, layoutH = 4560, 4142
+const monX, monY = 2000, 28 // test_bottom origin
 
-	// Move to target position.
-	a.sendRel(input.REL_X, x/2)
+func (a *App) moveMouse(_x, _y int32) {
+	x := ((monX+_x)*32768 + layoutW - 1) / layoutW
+	y := ((monY+_y)*32768 + layoutH - 1) / layoutH
+
+	// The kernel drops an ABS event equal to the axis's last value, and real-mouse
+	// movement doesn't update that value, so repeating a target would be ignored.
+	// A different value first guarantees the target registers.
+	nx, ny := x-1, y-1
+	if x == 0 {
+		nx = 1
+	}
+	if y == 0 {
+		ny = 1
+	}
+	a.sendAbs(input.ABS_X, nx)
+	a.sendAbs(input.ABS_Y, ny)
+	a.sendAbs(input.ABS_X, x)
+	a.sendAbs(input.ABS_Y, y)
 	a.sendSync()
-	a.sendRel(input.REL_Y, y/2)
-	a.sendSync()
-	time.Sleep(10 * time.Millisecond)
 }
 
 // click sends a left mouse button press and release.
@@ -69,11 +77,6 @@ func (a *App) clickPlayButton() {
 }
 
 // sendRel sends a relative axis movement event.
-func (a *App) sendRel(code uint16, value int32) {
-	if err := a.send.Send(IMan.WireEvent{Type: input.EV_REL, Code: code, Value: value}); err != nil {
-		println(err)
-	}
-}
 
 // sendSync sends a sync event to flush pending input events.
 func (a *App) sendSync() {
