@@ -68,6 +68,10 @@ func loadWRTimes(rs *RunState) {
 			rs.WRSob += rs.WRTimes[i]
 		}
 	}
+	scanner.Scan()
+	if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
+		rs.FGWR = time.Duration(ms) * time.Millisecond
+	}
 }
 
 // saveFile persists the relevant best times for the given target ("il" or "full").

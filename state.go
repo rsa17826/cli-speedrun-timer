@@ -28,6 +28,7 @@ type RunState struct {
 	TotalBest        time.Duration
 	SOB              time.Duration // Sum of individual-level bests
 	WRSob            time.Duration // Sum of world-record bests
+	FGWR             time.Duration // full game wr
 	FullRunBestTimes []time.Duration
 	ILBestTimes      []time.Duration
 	WRTimes          []time.Duration

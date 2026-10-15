@@ -25,7 +25,7 @@ BEGIN {
 # --- LINE 1 OF THE BLOCK (Row 1, 4, 7...) = Times ---
 NR % 3 == 1 {
     level_num = (NR - 1) / 3
-    if (level_num > 4) exit # We only need up to totalSplits (5 levels: 0-4)
+    if (level_num > 5) exit # We only need up to totalSplits (5 levels: 0-4+fg)
 
     time_val = ""
     for (i = NF; i > 0; i--) {
