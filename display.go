@@ -83,7 +83,7 @@ func Render(rs *RunState) {
 		wrp, wrpc := pctColor(rs.FGWR, rs.TotalBest, Red)
 
 		fmt.Fprintf(&sb,
-			"  %-10s Time: %s%-12s%s (Best Total: %s%-12s%s   SOB: %s%-12s%s %s%d%%%s WR: %s%s%s %s%d%%%s)\033[K\n",
+			"  %-12s Time: %s%-12s%s (Best Total: %s%-12s%s   SOB: %s%-12s%s %s%d%%%s WR: %s%s%s %s%d%%%s)\033[K\n",
 			"TOTAL:",
 			totalColor, formatDuration(currentTotal), Reset,
 			Purple, formatOrNone(rs.TotalBest), Reset,

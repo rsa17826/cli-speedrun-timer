@@ -6,7 +6,7 @@ hl.window_rule({
 	float = true,
 	no_focus = true,
 	no_initial_focus = true,
-	size = { "940", "180" },
+	size = { "940", "540" },
 	move = { "0", "0" },
 	border_size = 0,
 })
@@ -32,7 +32,8 @@ timer_hidden:set_enabled(true)
 
 hl.on("window.active", function(w)
 	-- if w and w.class == "explorer.exe" then
-	if w and w.class == "mathbreakers.exe" then
+	if w and w.title == "Math Quest | Adventure Game for Kids [URL] https://www.roomrecess.com/mobile/MathQuest/play.html - Helium" then
+	-- if w and w.class == "mathbreakers.exe" then
 		timer_hidden:set_enabled(false)
 		timer_visible:set_enabled(true)
 	else

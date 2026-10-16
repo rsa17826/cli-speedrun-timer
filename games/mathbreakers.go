@@ -26,7 +26,7 @@ func init() {
 	Register(&Game{
 		Name:        "mathbreakers",
 		WindowClass: "mathbreakers.exe",
-		Splits:      []string{"Segment 1", "Segment 2", "Segment 3", "Segment 4", "Segment 5"},
+		Splits:      []string{"level 1", "level 2", "level 3", "level 4", "level 5"},
 
 		DataDir: ".",
 
