@@ -20,12 +20,12 @@ func Render(rs *RunState) {
 
 	var currentTotal time.Duration
 
-	for i := range TotalSplits {
+	for i := range rs.Total {
 		if rs.ILMode > 0 && i != rs.ILMode-1 {
 			continue
 		}
 
-		splitName := fmt.Sprintf("Segment %d:", i+1)
+		splitName := rs.Game.Splits[i] + ":"
 		var dispTime time.Duration
 		segmentColor := Cyan
 
@@ -57,7 +57,7 @@ func Render(rs *RunState) {
 		wrp, wrpc := pctColor(rs.WRTimes[i], rs.ILBestTimes[i], Red)
 
 		fmt.Fprintf(&sb,
-			"  %-10s Time: %s%-12s%s (Run Best: %s%-12s%s %s%d%%%s IL Best: %s%-12s%s WR: %s%s%s %s%d%%%s)\033[K\n",
+			"  %-12s Time: %s%-12s%s (Run Best: %s%-12s%s %s%d%%%s IL Best: %s%-12s%s WR: %s%s%s %s%d%%%s)\033[K\n",
 			splitName,
 			segmentColor, timeStr, Reset,
 			Purple, formatOrNone(rs.FullRunBestTimes[i]), Reset, pc, p, Reset,

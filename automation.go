@@ -1,27 +1,30 @@
 package main
 
 import (
-	"os"
-	"path"
-	"strconv"
 	"time"
 
 	input "github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
 )
 
-// moveMouse moves the hardware mouse cursor to absolute screen coordinates
-// by first resetting to (0,0) then moving in two steps for precision.
+// Machine-specific monitor layout used to translate coordinates to absolute
+// ABS values.
+const layoutW, layoutH = 4560, 4142
+const monX, monY = 2000, 28 // test_bottom origin
+
+// Send implements games.Ctx.
+func (a *App) Send(ev IMan.WireEvent) error {
+	return a.send.Send(ev)
+}
+
 func (a *App) sendAbs(code uint16, value int32) {
 	if err := a.send.Send(IMan.WireEvent{Type: input.EV_ABS, Code: code, Value: value}); err != nil {
 		panic(err)
 	}
 }
 
-const layoutW, layoutH = 4560, 4142
-const monX, monY = 2000, 28 // test_bottom origin
-
-func (a *App) moveMouse(_x, _y int32) {
+// MoveMouse implements games.Ctx.
+func (a *App) MoveMouse(_x, _y int32) {
 	x := ((monX+_x)*32768 + layoutW - 1) / layoutW
 	y := ((monY+_y)*32768 + layoutH - 1) / layoutH
 
@@ -39,11 +42,11 @@ func (a *App) moveMouse(_x, _y int32) {
 	a.sendAbs(input.ABS_Y, ny)
 	a.sendAbs(input.ABS_X, x)
 	a.sendAbs(input.ABS_Y, y)
-	a.sendSync()
+	a.Sync()
 }
 
-// click sends a left mouse button press and release.
-func (a *App) click() {
+// Click implements games.Ctx.
+func (a *App) Click() {
 	a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.BTN_LEFT, Value: 1})
 	a.send.Send(IMan.WireEvent{})
 	time.Sleep(30 * time.Millisecond)
@@ -53,34 +56,32 @@ func (a *App) click() {
 	time.Sleep(30 * time.Millisecond)
 }
 
-// playLevel navigates to and launches the given level index.
-func (a *App) playLevel(i int) {
-	// a.blocking = true
-	a.rs.Level = i
-	os.WriteFile(path.Join(WatchDir, "mode"), []byte(strconv.Itoa(i)), 0644)
-	// a.clickPlayButton()
-	// a.moveMouse(LevelPositions[i][0], LevelPositions[i][1])
-	// a.click()
-	// a.blocking = false
+// TapKey implements games.Ctx.
+func (a *App) TapKey(code uint16, hold time.Duration) {
+	a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: code, Value: 1})
+	time.Sleep(hold)
+	a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: code, Value: 0})
 }
 
-// clickExitLevelButton clicks the in-level exit/return button.
-func (a *App) clickExitLevelButton() {
-	a.moveMouse(ScreenWidth/2, ScreenHeight/2+75)
-	a.click()
+// Scroll implements games.Ctx.
+func (a *App) Scroll(amount int32) {
+	a.send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_WHEEL, Value: amount})
 }
 
-// clickPlayButton clicks the main play/level-select button.
-func (a *App) clickPlayButton() {
-	a.moveMouse(596, 223)
-	a.click()
+// ActiveSplit implements games.Ctx.
+func (a *App) ActiveSplit() int {
+	return a.rs.ActiveSplit
 }
 
-// sendRel sends a relative axis movement event.
-
-// sendSync sends a sync event to flush pending input events.
-func (a *App) sendSync() {
+// Sync implements games.Ctx.
+func (a *App) Sync() {
 	if err := a.send.Send(IMan.WireEvent{}); err != nil {
 		println(err)
 	}
+}
+
+// playLevel records the level and lets the game launch it.
+func (a *App) playLevel(i int) {
+	a.rs.Level = i
+	a.rs.Game.PlayLevel(a, i)
 }

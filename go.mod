@@ -1,6 +1,6 @@
-module mb
+module speedrun
 
-go 1.26.3
+go 1.26.2
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1

@@ -6,11 +6,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"slices"
+	"strings"
 	"syscall"
 	"time"
 
 	input "github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
+
+	"speedrun/games"
 )
 
 // App ties together all runtime components of the speedrun timer.
@@ -23,28 +27,39 @@ type App struct {
 }
 
 func main() {
-	rs := NewRunState()
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: go run . <game> [-il N] [-nor]\nAvailable games: %s\n", strings.Join(games.Names(), ", "))
+		os.Exit(1)
+	}
+	game, ok := games.Get(os.Args[1])
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Unknown game %q. Available games: %s\n", os.Args[1], strings.Join(games.Names(), ", "))
+		os.Exit(1)
+	}
 
-	flag.IntVar(&rs.ILMode, "il", 0, "Individual Level mode: run a single split (1-5). 0 = full run.")
-	flag.BoolVar(&rs.NoReset, "nor", false, "No-reset mode: ESC navigates back without resetting the run.")
-	flag.Parse()
+	rs := NewRunState(game)
 
-	if rs.ILMode < 0 || rs.ILMode > TotalSplits {
-		fmt.Fprintf(os.Stderr, "Error: -il must be between 0 and %d\n", TotalSplits)
+	fs := flag.NewFlagSet(game.Name, flag.ExitOnError)
+	fs.IntVar(&rs.ILMode, "il", 0, "Individual Level mode: run a single split (1-N). 0 = full run.")
+	fs.BoolVar(&rs.NoReset, "nor", false, "No-reset mode: ESC navigates back without resetting the run.")
+	fs.Parse(os.Args[2:])
+
+	if rs.ILMode < 0 || rs.ILMode > rs.Total {
+		fmt.Fprintf(os.Stderr, "Error: -il must be between 0 and %d\n", rs.Total)
 		os.Exit(1)
 	}
 
 	app := &App{
 		rs:      rs,
-		tracker: NewWindowTracker(),
+		tracker: NewWindowTracker(game.WindowClass),
 	}
 
 	var err error
-	app.read, err = IMan.Connect("mathbreakers", IMan.ModeFilter)
+	app.read, err = IMan.Connect(game.Name, IMan.ModeFilter)
 	if err != nil {
 		log.Fatalf("Failed to connect input reader: %v", err)
 	}
-	app.send, err = IMan.Connect("mathbreakers", IMan.ModeInjection)
+	app.send, err = IMan.Connect(game.Name, IMan.ModeInjection)
 	if err != nil {
 		log.Fatalf("Failed to connect input sender: %v", err)
 	}
@@ -88,6 +103,7 @@ func main() {
 
 // eventLoop is the main input-processing loop.
 func (a *App) eventLoop() {
+	g := a.rs.Game
 	for {
 		ev, err := a.read.ReadNext()
 		if err != nil {
@@ -100,37 +116,34 @@ func (a *App) eventLoop() {
 			continue
 		}
 
-		if ev.Event.Type == input.EV_KEY {
-			switch ev.Event.Code {
-			case input.KEY_W, input.KEY_A, input.KEY_S, input.KEY_D:
-				if ev.Event.Value == 1 {
-					a.handleMovementKey()
-				}
-			case input.KEY_TAB:
-				if ev.Event.Value == 1 {
-					a.rs.Reset()
-				}
-			case input.KEY_ESC:
-				if ev.Event.Value == 1 {
-					a.read.BlockInput(ev.Event.Seq, 1)
-					a.handleEscape()
-					// go a.handleEscape()
-					continue
-				}
-			case input.BTN_RIGHT:
-				if ev.Event.Value == 1 {
-					print(a.rs.ActiveSplit)
-					if a.rs.ActiveSplit == 4 {
-						a.read.BlockInput(ev.Event.Seq, 1)
-						a.send.Send(IMan.WireEvent{Type: input.EV_REL, Code: input.REL_WHEEL, Value: 1})
-					} else {
-						a.read.BlockInput(ev.Event.Seq, 1)
-						go func() {
-							a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.KEY_R, Value: 1})
-							time.Sleep(40 * time.Millisecond)
-							a.send.Send(IMan.WireEvent{Type: input.EV_KEY, Code: input.KEY_R, Value: 0})
-						}()
+		if ev.Event.Type == input.EV_KEY && ev.Event.Value == 1 {
+			code := ev.Event.Code
+			switch {
+			case slices.Contains(g.StartKeys, code):
+				a.handleMovementKey()
+			case slices.Contains(g.ResetKeys, code):
+				a.rs.Reset()
+			case slices.Contains(g.RestartKeys, code):
+				a.read.BlockInput(ev.Event.Seq, 1)
+				a.handleEscape()
+				continue
+			default:
+				handled := false
+				for _, b := range g.Binds {
+					if b.Key != code {
+						continue
 					}
+					handled = true
+					if b.Block {
+						a.read.BlockInput(ev.Event.Seq, 1)
+						go b.OnPress(a)
+					} else {
+						a.read.BlockInput(ev.Event.Seq, 0)
+						go b.OnPress(a)
+					}
+					break
+				}
+				if handled {
 					continue
 				}
 			}
@@ -144,7 +157,7 @@ func (a *App) eventLoop() {
 	}
 }
 
-// handleMovementKey starts or continues a run when WASD is pressed.
+// handleMovementKey starts or continues a run when a start key is pressed.
 func (a *App) handleMovementKey() {
 	rs := a.rs
 	if rs.Ended {
@@ -181,15 +194,6 @@ func (a *App) handleEscape() {
 		rs.Reset()
 	}
 
-	// go func() {
-	// time.Sleep(20 * time.Millisecond)
-	// a.blocking = true
-	// a.clickExitLevelButton()
-	// time.Sleep(600 * time.Millisecond)
-	// a.moveMouse(735, 963)
-	// a.click()
-	// time.Sleep(400 * time.Millisecond)
-
 	switch {
 	case rs.ILMode > 0:
 		a.playLevel(rs.ILMode - 1) // playLevel is 0-indexed
@@ -202,17 +206,6 @@ func (a *App) handleEscape() {
 	default:
 		a.playLevel(0)
 	}
-
-	// a.blocking = true
-	// time.Sleep(800 * time.Millisecond)
-
-	// for range 11 {
-	// 	a.sendRel(input.REL_X, 1)
-	// 	a.sendSync()
-	// 	time.Sleep(10 * time.Millisecond)
-	// }
-	// a.blocking = false
-	// }()
 
 	loadBestTimes(rs)
 }
@@ -241,7 +234,7 @@ func (a *App) levelEnded() {
 		return
 	}
 
-	if rs.ActiveSplit == TotalSplits-1 {
+	if rs.ActiveSplit == rs.Total-1 {
 		// Full run complete — check for a new personal best.
 		var total time.Duration
 		for _, t := range rs.SplitTimes {

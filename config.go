@@ -11,29 +11,14 @@ const (
 	White  = "\033[37m"
 )
 
-// Layout / game constants.
+// Machine-wide layout constants (not game specific).
 const (
-	TotalSplits  = 5
-	ScreenWidth  = 1920
-	ScreenHeight = 1080
 	DisplayWidth = 104
 )
 
-// File and directory paths.
+// Record file names, stored inside each game's DataDir.
 const (
-	FullRunPath = "./times_full_run"
-	ILPath      = "./times_il_all"
-	WRPath      = "./wrs"
-	WatchDir    = "/home/nyix/projects/mathbreakers-ghost-speedrun-mod/mathbreakers"
-	TargetFile  = "level_cleared.txt"
-	PIDFile     = "/tmp/mathbreakers_pid_a"
+	FullRunFile = "times_full_run"
+	ILFile      = "times_il_all"
+	WRFile      = "wrs"
 )
-
-// LevelPositions maps a level index to its [x, y] click coordinates on screen.
-var LevelPositions = [][2]int32{
-	{546, 293},
-	{549, 555},
-	{944, 556},
-	{547, 808},
-	{935, 814},
-}

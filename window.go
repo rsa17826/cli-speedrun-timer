@@ -5,27 +5,24 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 )
 
-// WindowTracker monitors the active Hyprland window and manages the input
-// modifier process that applies per-game key remappings.
+// WindowTracker monitors the active Hyprland window and records whether the
+// game's window is focused.
 type WindowTracker struct {
 	mu          sync.Mutex
 	LastActive  bool
-	modifierCmd *exec.Cmd
-	pidFile     string
+	windowClass string
 }
 
-// NewWindowTracker returns a tracker configured with the standard PID file path.
-func NewWindowTracker() *WindowTracker {
-	return &WindowTracker{pidFile: PIDFile}
+// NewWindowTracker returns a tracker for the given Hyprland window class.
+func NewWindowTracker(windowClass string) *WindowTracker {
+	return &WindowTracker{windowClass: windowClass}
 }
 
-// listenToHyprland connects to the Hyprland IPC socket and reacts to
-// window-focus changes, enabling/disabling game-specific key modifiers.
+// listenToHyprland connects to the Hyprland IPC socket and tracks focus changes.
 func (wt *WindowTracker) listenToHyprland() {
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	instanceSig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
@@ -44,26 +41,15 @@ func (wt *WindowTracker) listenToHyprland() {
 
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
-		line := scanner.Text()
-
-		after, ok := strings.CutPrefix(line, "activewindow>>")
+		after, ok := strings.CutPrefix(scanner.Text(), "activewindow>>")
 		if !ok {
 			continue
 		}
 
-		parts := strings.SplitN(after, ",", 2)
-		if len(parts) == 0 {
-			continue
-		}
-		activeClass := parts[0]
+		activeClass := strings.SplitN(after, ",", 2)[0]
 
 		wt.mu.Lock()
-		isGame := activeClass == "mathbreakers.exe"
-		if isGame && !wt.LastActive {
-			wt.LastActive = true
-		} else if !isGame && wt.LastActive {
-			wt.LastActive = false
-		}
+		wt.LastActive = activeClass == wt.windowClass
 		wt.mu.Unlock()
 	}
 }

@@ -4,11 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
 
+func recordPath(rs *RunState, name string) string {
+	return filepath.Join(rs.Game.DataDir, name)
+}
+
 // loadBestTimes reads all three record files (full-run, IL, WR) into rs.
+// Missing files are normal on a first run and are simply skipped.
 func loadBestTimes(rs *RunState) {
 	loadFullRunTimes(rs)
 	loadILTimes(rs)
@@ -16,14 +22,14 @@ func loadBestTimes(rs *RunState) {
 }
 
 func loadFullRunTimes(rs *RunState) {
-	file, err := os.Open(FullRunPath)
+	file, err := os.Open(recordPath(rs, FullRunFile))
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for i := 0; i < TotalSplits && scanner.Scan(); i++ {
+	for i := 0; i < rs.Total && scanner.Scan(); i++ {
 		if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 			rs.FullRunBestTimes[i] = time.Duration(ms) * time.Millisecond
 		}
@@ -37,7 +43,7 @@ func loadFullRunTimes(rs *RunState) {
 }
 
 func loadILTimes(rs *RunState) {
-	file, err := os.Open(ILPath)
+	file, err := os.Open(recordPath(rs, ILFile))
 	if err != nil {
 		return
 	}
@@ -45,7 +51,7 @@ func loadILTimes(rs *RunState) {
 
 	scanner := bufio.NewScanner(file)
 	rs.SOB = 0
-	for i := 0; i < TotalSplits && scanner.Scan(); i++ {
+	for i := 0; i < rs.Total && scanner.Scan(); i++ {
 		if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 			rs.ILBestTimes[i] = time.Duration(ms) * time.Millisecond
 			rs.SOB += rs.ILBestTimes[i]
@@ -54,7 +60,7 @@ func loadILTimes(rs *RunState) {
 }
 
 func loadWRTimes(rs *RunState) {
-	file, err := os.Open(WRPath)
+	file, err := os.Open(recordPath(rs, WRFile))
 	if err != nil {
 		return
 	}
@@ -62,7 +68,7 @@ func loadWRTimes(rs *RunState) {
 
 	scanner := bufio.NewScanner(file)
 	rs.WRSob = 0
-	for i := 0; i < TotalSplits && scanner.Scan(); i++ {
+	for i := 0; i < rs.Total && scanner.Scan(); i++ {
 		if ms, err := strconv.ParseInt(scanner.Text(), 10, 64); err == nil {
 			rs.WRTimes[i] = time.Duration(ms) * time.Millisecond
 			rs.WRSob += rs.WRTimes[i]
@@ -85,9 +91,9 @@ func saveFile(rs *RunState, target string) {
 }
 
 func saveILTimes(rs *RunState) {
-	file, err := os.Create(ILPath)
+	file, err := os.Create(recordPath(rs, ILFile))
 	if err != nil {
-		return
+		panic(err)
 	}
 	defer file.Close()
 	for _, t := range rs.ILBestTimes {
@@ -96,9 +102,9 @@ func saveILTimes(rs *RunState) {
 }
 
 func saveFullRunTimes(rs *RunState) {
-	file, err := os.Create(FullRunPath)
+	file, err := os.Create(recordPath(rs, FullRunFile))
 	if err != nil {
-		return
+		panic(err)
 	}
 	defer file.Close()
 	for _, t := range rs.FullRunBestTimes {

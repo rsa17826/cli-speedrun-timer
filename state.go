@@ -1,12 +1,18 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"speedrun/games"
+)
 
 // RunState holds all mutable state for the current speedrun session.
-// Keeping state in one struct makes it easy to reset, inspect, and extend.
 type RunState struct {
+	Game  *games.Game
+	Total int // number of splits, len(Game.Splits)
+
 	// Run configuration (set at startup)
-	ILMode  int  // 0 = full run, 1-5 = specific IL split
+	ILMode  int  // 0 = full run, 1-Total = specific IL split
 	NoReset bool // if true, ESC does not reset the run
 
 	// Active level tracking
@@ -17,8 +23,8 @@ type RunState struct {
 	Paused          bool
 	Ended           bool
 	StartTime       time.Time
-	AccumulatedTime time.Duration // Time accumulated across pauses in the current split
-	Elapsed         time.Duration // Live split time (updated by display ticker)
+	AccumulatedTime time.Duration
+	Elapsed         time.Duration
 
 	// Split tracking
 	ActiveSplit int
@@ -26,21 +32,24 @@ type RunState struct {
 
 	// Best-time records (loaded from disk)
 	TotalBest        time.Duration
-	SOB              time.Duration // Sum of individual-level bests
-	WRSob            time.Duration // Sum of world-record bests
-	FGWR             time.Duration // full game wr
+	SOB              time.Duration
+	WRSob            time.Duration
+	FGWR             time.Duration
 	FullRunBestTimes []time.Duration
 	ILBestTimes      []time.Duration
 	WRTimes          []time.Duration
 }
 
-// NewRunState returns an initialized RunState ready to use.
-func NewRunState() *RunState {
+// NewRunState returns an initialized RunState for the given game.
+func NewRunState(g *games.Game) *RunState {
+	n := len(g.Splits)
 	return &RunState{
-		SplitTimes:       make([]time.Duration, TotalSplits),
-		FullRunBestTimes: make([]time.Duration, TotalSplits),
-		ILBestTimes:      make([]time.Duration, TotalSplits),
-		WRTimes:          make([]time.Duration, TotalSplits),
+		Game:             g,
+		Total:            n,
+		SplitTimes:       make([]time.Duration, n),
+		FullRunBestTimes: make([]time.Duration, n),
+		ILBestTimes:      make([]time.Duration, n),
+		WRTimes:          make([]time.Duration, n),
 	}
 }
 
