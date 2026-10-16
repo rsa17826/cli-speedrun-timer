@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 if command -v request-windowrule &>/dev/null; then
-  request-windowrule ./windowrules.lua
+  request-windowrule "./data/$1/windowrules.lua"
 else
   echo "request-windowrule not installed" >&2
 fi
 
 # kitty --class TIMER -o "shell_integration=disabled" go run . "$@"
-kitty --class TIMER -c /dev/null -o "shell_integration=disabled" go run . "$@"
+kitty --class "TIMER_$1" -c /dev/null -o "shell_integration=disabled" go run . "$@"

@@ -13,7 +13,7 @@ const (
 
 // Machine-wide layout constants (not game specific).
 const (
-	DisplayWidth = 104
+	DisplayWidth = 106
 )
 
 const (

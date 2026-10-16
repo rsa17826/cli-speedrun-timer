@@ -1,13 +1,15 @@
 // Package winrules generates the Hyprland window rules file for a game's timer window.
 package winrules
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 const (
 	// LineHeight is the height in pixels given to each line of timer output.
-	LineHeight = 20
-	// Width is the width in pixels of the timer window.
-	Width = 940
+	LineHeight   = 20
+	DisplayWidth = 106
 )
 
 // Generate returns the contents of windowrules.lua for a game.
@@ -62,5 +64,5 @@ hl.on("window.active", function(w)
 		timer_hidden:set_enabled(true)
 	end
 end)
-`, gameName, Width, height, matchField, matchValue)
+`, gameName, uint32(math.Round(DisplayWidth*9.0384615384)), height, matchField, matchValue)
 }
