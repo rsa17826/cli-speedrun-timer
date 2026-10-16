@@ -14,7 +14,6 @@ type RunState struct {
 	// Run configuration (set at startup)
 	ILMode  int  // 0 = full run, 1-Total = specific IL split
 	NoReset bool // if true, ESC does not reset the run
-	NoPause bool // if true, the timer keeps running into the next split instead of pausing
 
 	// Active level tracking
 	Level int

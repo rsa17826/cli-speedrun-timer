@@ -10,7 +10,7 @@ import (
 )
 
 func recordPath(rs *RunState, name string) string {
-	return filepath.Join(rs.Game.DataDir, name)
+	return filepath.Join("data", rs.Game.Name, name)
 }
 
 // loadBestTimes reads all three record files (full-run, IL, WR) into rs.

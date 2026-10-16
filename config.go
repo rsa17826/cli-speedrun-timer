@@ -16,7 +16,6 @@ const (
 	DisplayWidth = 104
 )
 
-// Record file names, stored inside each game's DataDir.
 const (
 	FullRunFile = "times_full_run"
 	ILFile      = "times_il_all"

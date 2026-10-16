@@ -44,7 +44,6 @@ func main() {
 	fs := flag.NewFlagSet(game.Name, flag.ExitOnError)
 	fs.IntVar(&rs.ILMode, "il", 0, "Individual Level mode: run a single split (1-N). 0 = full run.")
 	fs.BoolVar(&rs.NoReset, "nor", false, "No-reset mode: ESC navigates back without resetting the run.")
-	fs.BoolVar(&rs.NoPause, "np", false, "No-pause mode: after a split ends the timer continues straight into the next split.")
 	fs.Parse(os.Args[2:])
 
 	if rs.ILMode < 0 || rs.ILMode > rs.Total {
@@ -58,7 +57,7 @@ func main() {
 	}
 
 	field, value := game.WindowMatch()
-	rulesPath := filepath.Join(game.DataDir, "windowrules.lua")
+	rulesPath := filepath.Join("data", game.Name, "windowrules.lua")
 	rules := winrules.Generate(game.Name, field, value, displayLines(rs.Total)*winrules.LineHeight)
 	if err := os.WriteFile(rulesPath, []byte(rules), 0644); err != nil {
 		log.Fatalf("Failed to write %s: %v", rulesPath, err)
@@ -259,7 +258,7 @@ func (a *App) levelEnded() {
 		rs.Ended = true
 	} else {
 		next := rs.ActiveSplit + 1
-		if rs.NoPause {
+		if rs.Game.NoPause {
 			// Keep timing: the next split starts at the instant this one ended.
 			rs.AccumulatedTime = 0
 			rs.Elapsed = 0

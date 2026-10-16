@@ -32,8 +32,6 @@ func init() {
 		WindowClass: "mathbreakers.exe",
 		Splits:      []string{"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"},
 
-		DataDir: "./data/mathbreakers",
-
 		WatchDir:       mathbreakersWatchDir,
 		LevelDoneFile:  "level_cleared.txt",
 		LevelResetFile: "levelWasReset",

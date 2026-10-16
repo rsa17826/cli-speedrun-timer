@@ -39,20 +39,21 @@ type Bind struct {
 
 // Game describes everything the engine needs to time one game.
 // Every field is required except Binds (which may be empty) and whichever of
-// WindowClass / WindowTitle is not used. DataDir is the game's folder: records
-// and the generated windowrules.lua live there.
+// WindowClass / WindowTitle is not used.
 type Game struct {
 	Name        string   // name used on the command line and for the input-manager connection
 	WindowClass string   // Hyprland window class of the game, e.g. "mathbreakers.exe" (set this OR WindowTitle)
 	WindowTitle string   // Hyprland window title of the game (set this OR WindowClass)
 	Splits      []string // split names, in order; len(Splits) is the number of splits
 
-	DataDir string // directory holding times_full_run / times_il_all / wrs (use games.Dir())
-
 	// File-based signalling from the game/mod.
 	WatchDir       string // directory the game/mod writes into
 	LevelDoneFile  string // created by the game when a split is finished
 	LevelResetFile string // created by the game when the level was reset
+
+	// NoPause: when true the timer runs straight into the next split when one
+	// ends, instead of pausing until a start key is pressed.
+	NoPause bool
 
 	StartKeys   []uint16 // first press starts the timer / resumes the next split
 	ResetKeys   []uint16 // reset the run (key still passes through)
@@ -75,8 +76,6 @@ func Register(g *Game) {
 		panic(fmt.Sprintf("games: %s: set exactly one of WindowClass or WindowTitle", g.Name))
 	case len(g.Splits) == 0:
 		panic(fmt.Sprintf("games: %s: Splits is required", g.Name))
-	case g.DataDir == "":
-		panic(fmt.Sprintf("games: %s: DataDir is required", g.Name))
 	case g.WatchDir == "":
 		panic(fmt.Sprintf("games: %s: WatchDir is required", g.Name))
 	case g.LevelDoneFile == "":

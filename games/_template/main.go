@@ -21,8 +21,6 @@ func init() {
 		WindowClass: "yourgame.exe", // see `hyprctl activewindow`; use WindowTitle instead to match the title
 		Splits:      []string{"Level 1", "Level 2", "Level 3"},
 
-		DataDir: Dir(), // times_full_run, times_il_all, wrs live next to this file
-
 		WatchDir:       "/path/the/game/writes/into",
 		LevelDoneFile:  "level_cleared.txt",
 		LevelResetFile: "levelWasReset",
