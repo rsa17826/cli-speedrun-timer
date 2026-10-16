@@ -30,7 +30,7 @@ func init() {
 	Register(&Game{
 		Name:        "mathbreakers",
 		WindowClass: "mathbreakers.exe",
-		Splits:      []string{"Segment 1", "Segment 2", "Segment 3", "Segment 4", "Segment 5"},
+		Splits:      []string{"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"},
 
 		DataDir: "./data/mathbreakers",
 
