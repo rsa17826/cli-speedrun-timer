@@ -90,6 +90,23 @@ func Render(rs *RunState) {
 			Purple, formatDuration(rs.SOB), Reset, pc, p, Reset,
 			wrpc, formatDuration(rs.FGWR), Reset, wrpc, wrp, Reset,
 		)
+
+		// Where the run would end up if every remaining split were an IL best.
+		bestPossible := "--:--:--.---"
+		pbText, pbColor := "--", White
+		wrText, wrColor := "--", White
+		if proj, ok := projectedBest(rs); ok {
+			bestPossible = formatDuration(proj)
+			pbText, pbColor = deltaText(proj, rs.TotalBest)
+			wrText, wrColor = deltaText(proj, rs.FGWR)
+		}
+		fmt.Fprintf(&sb,
+			"  %-12s Time: %s%-12s%s (vs PB: %s%-13s%s vs WR: %s%-13s%s)\033[K\n",
+			"BEST POSS.:",
+			Cyan, bestPossible, Reset,
+			pbColor, pbText, Reset,
+			wrColor, wrText, Reset,
+		)
 	}
 
 	sb.WriteString(pad("", "=", DisplayWidth, false))
@@ -98,6 +115,51 @@ func Render(rs *RunState) {
 	sb.WriteString("\033[J")
 
 	fmt.Print(sb.String())
+}
+
+// displayLines is the number of terminal lines Render prints for a full run:
+// header, one per split, separator, total, best possible, footer, status.
+func displayLines(total int) int {
+	return total + 6
+}
+
+// projectedBest returns the final time if every remaining split were the
+// personal-best (IL best) time. ok is false when no run is in progress or a
+// remaining split has no recorded best.
+func projectedBest(rs *RunState) (total time.Duration, ok bool) {
+	if !rs.Started {
+		return 0, false
+	}
+	for i := 0; i < rs.Total; i++ {
+		switch {
+		case i < rs.ActiveSplit, i == rs.ActiveSplit && rs.Paused:
+			total += rs.SplitTimes[i]
+		default:
+			best := rs.ILBestTimes[i]
+			if best == 0 {
+				return 0, false
+			}
+			if i == rs.ActiveSplit && rs.Elapsed > best {
+				total += rs.Elapsed
+			} else {
+				total += best
+			}
+		}
+	}
+	return total, true
+}
+
+// deltaText formats projected relative to target ("+" = slower than target)
+// and picks a color: green when it would beat the target.
+func deltaText(projected, target time.Duration) (string, string) {
+	if target == 0 {
+		return "NONE", White
+	}
+	d := projected - target
+	if d <= 0 {
+		return "-" + formatDuration(-d), Green
+	}
+	return "+" + formatDuration(d), Red
 }
 
 // statusLine returns the footer status string based on current run state.

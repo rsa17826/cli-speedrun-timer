@@ -7,19 +7,23 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"speedrun/games"
 )
 
 // WindowTracker monitors the active Hyprland window and records whether the
 // game's window is focused.
 type WindowTracker struct {
-	mu          sync.Mutex
-	LastActive  bool
-	windowClass string
+	mu         sync.Mutex
+	LastActive bool
+	field      string // "class" or "title"
+	value      string
 }
 
-// NewWindowTracker returns a tracker for the given Hyprland window class.
-func NewWindowTracker(windowClass string) *WindowTracker {
-	return &WindowTracker{windowClass: windowClass}
+// NewWindowTracker returns a tracker for the game's window.
+func NewWindowTracker(g *games.Game) *WindowTracker {
+	field, value := g.WindowMatch()
+	return &WindowTracker{field: field, value: value}
 }
 
 // listenToHyprland connects to the Hyprland IPC socket and tracks focus changes.
@@ -46,10 +50,20 @@ func (wt *WindowTracker) listenToHyprland() {
 			continue
 		}
 
-		activeClass := strings.SplitN(after, ",", 2)[0]
+		// Format is "class,title"; the title itself may contain commas.
+		parts := strings.SplitN(after, ",", 2)
+		if len(parts) != 2 {
+			panic(fmt.Sprintf("unexpected activewindow event: %q", after))
+		}
+		class, title := parts[0], parts[1]
+
+		active := title
+		if wt.field == "class" {
+			active = class
+		}
 
 		wt.mu.Lock()
-		wt.LastActive = activeClass == wt.windowClass
+		wt.LastActive = active == wt.value
 		wt.mu.Unlock()
 	}
 }

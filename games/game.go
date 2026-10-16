@@ -4,10 +4,11 @@ package games
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"time"
 
-	input "github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
 )
 
@@ -32,18 +33,21 @@ type Ctx interface {
 // Bind is a custom key macro. It fires on key press while the game is focused.
 type Bind struct {
 	Key     uint16
-	Block   bool         // true = swallow the original key press
+	Block   bool        // true = swallow the original key press
 	OnPress func(c Ctx) // runs in its own goroutine, so sleeping is fine
 }
 
 // Game describes everything the engine needs to time one game.
-// Every field is required except Binds (which may be empty).
+// Every field is required except Binds (which may be empty) and whichever of
+// WindowClass / WindowTitle is not used. DataDir is the game's folder: records
+// and the generated windowrules.lua live there.
 type Game struct {
 	Name        string   // name used on the command line and for the input-manager connection
-	WindowClass string   // Hyprland window class of the game, e.g. "mathbreakers.exe"
+	WindowClass string   // Hyprland window class of the game, e.g. "mathbreakers.exe" (set this OR WindowTitle)
+	WindowTitle string   // Hyprland window title of the game (set this OR WindowClass)
 	Splits      []string // split names, in order; len(Splits) is the number of splits
 
-	DataDir string // directory holding times_full_run / times_il_all / wrs
+	DataDir string // directory holding times_full_run / times_il_all / wrs (use games.Dir())
 
 	// File-based signalling from the game/mod.
 	WatchDir       string // directory the game/mod writes into
@@ -67,8 +71,8 @@ func Register(g *Game) {
 	switch {
 	case g.Name == "":
 		panic("games: Game.Name is required")
-	case g.WindowClass == "":
-		panic(fmt.Sprintf("games: %s: WindowClass is required", g.Name))
+	case (g.WindowClass == "") == (g.WindowTitle == ""):
+		panic(fmt.Sprintf("games: %s: set exactly one of WindowClass or WindowTitle", g.Name))
 	case len(g.Splits) == 0:
 		panic(fmt.Sprintf("games: %s: Splits is required", g.Name))
 	case g.DataDir == "":
@@ -90,6 +94,15 @@ func Register(g *Game) {
 	registry[g.Name] = g
 }
 
+// WindowMatch returns which Hyprland window property identifies the game
+// ("class" or "title") and the value it must equal.
+func (g *Game) WindowMatch() (field, value string) {
+	if g.WindowClass != "" {
+		return "class", g.WindowClass
+	}
+	return "title", g.WindowTitle
+}
+
 // Get returns the game registered under name.
 func Get(name string) (*Game, bool) {
 	g, ok := registry[name]
@@ -106,6 +119,13 @@ func Names() []string {
 	return names
 }
 
-// Re-exported so game files can reach key codes without a second import
-// if they prefer; they can also import go-input-lib directly.
-var _ = input.EV_KEY
+// Dir returns the directory of the Go file that calls it. A game calls this
+// from its own package so its times and other files can live next to its code,
+// no matter which directory the timer is run from.
+func Dir() string {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("games.Dir: could not determine caller file")
+	}
+	return filepath.Dir(file)
+}

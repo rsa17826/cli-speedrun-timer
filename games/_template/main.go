@@ -1,22 +1,27 @@
-// Files starting with "_" are ignored by the Go tool.
-// Copy this to games/yourgame.go (and delete this comment) to add a game,
-// then run:  go run . yourgame
-
-package games
+// The "_template" folder is ignored by the Go tool.
+// To add a game: copy this folder to games/yourgame, rename the package to
+// match, then add one line to games_import.go:
+//
+//	_ "speedrun/games/yourgame"
+//
+// and run:  go run . yourgame
+package yourgame
 
 import (
 	"time"
 
 	input "github.com/rsa17826/go-input-lib"
+
+	. "speedrun/games"
 )
 
 func init() {
 	Register(&Game{
 		Name:        "yourgame",
-		WindowClass: "yourgame.exe", // see `hyprctl activewindow`
+		WindowClass: "yourgame.exe", // see `hyprctl activewindow`; use WindowTitle instead to match the title
 		Splits:      []string{"Level 1", "Level 2", "Level 3"},
 
-		DataDir: "./data/yourgame", // must exist; holds times_full_run, times_il_all, wrs
+		DataDir: Dir(), // times_full_run, times_il_all, wrs live next to this file
 
 		WatchDir:       "/path/the/game/writes/into",
 		LevelDoneFile:  "level_cleared.txt",

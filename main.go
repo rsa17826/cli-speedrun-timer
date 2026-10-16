@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
@@ -15,6 +16,7 @@ import (
 	"github.com/rsa17826/input-manager/IMan"
 
 	"speedrun/games"
+	"speedrun/winrules"
 )
 
 // App ties together all runtime components of the speedrun timer.
@@ -42,6 +44,7 @@ func main() {
 	fs := flag.NewFlagSet(game.Name, flag.ExitOnError)
 	fs.IntVar(&rs.ILMode, "il", 0, "Individual Level mode: run a single split (1-N). 0 = full run.")
 	fs.BoolVar(&rs.NoReset, "nor", false, "No-reset mode: ESC navigates back without resetting the run.")
+	fs.BoolVar(&rs.NoPause, "np", false, "No-pause mode: after a split ends the timer continues straight into the next split.")
 	fs.Parse(os.Args[2:])
 
 	if rs.ILMode < 0 || rs.ILMode > rs.Total {
@@ -51,7 +54,14 @@ func main() {
 
 	app := &App{
 		rs:      rs,
-		tracker: NewWindowTracker(game.WindowClass),
+		tracker: NewWindowTracker(game),
+	}
+
+	field, value := game.WindowMatch()
+	rulesPath := filepath.Join(game.DataDir, "windowrules.lua")
+	rules := winrules.Generate(game.Name, field, value, displayLines(rs.Total)*winrules.LineHeight)
+	if err := os.WriteFile(rulesPath, []byte(rules), 0644); err != nil {
+		log.Fatalf("Failed to write %s: %v", rulesPath, err)
 	}
 
 	var err error
@@ -217,8 +227,9 @@ func (a *App) levelEnded() {
 		return
 	}
 
+	now := time.Now()
 	rs.Paused = true
-	finalTime := rs.AccumulatedTime + time.Since(rs.StartTime)
+	finalTime := rs.AccumulatedTime + now.Sub(rs.StartTime)
 	rs.AccumulatedTime = finalTime
 	rs.Elapsed = finalTime
 	rs.SplitTimes[rs.ActiveSplit] = finalTime
@@ -247,10 +258,19 @@ func (a *App) levelEnded() {
 		}
 		rs.Ended = true
 	} else {
+		next := rs.ActiveSplit + 1
+		if rs.NoPause {
+			// Keep timing: the next split starts at the instant this one ended.
+			rs.AccumulatedTime = 0
+			rs.Elapsed = 0
+			rs.StartTime = now
+			rs.ActiveSplit = next
+			rs.Paused = false
+		}
 		// Auto-advance to the next level after a short delay.
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			a.playLevel(rs.ActiveSplit + 1)
+			a.playLevel(next)
 		}()
 	}
 }

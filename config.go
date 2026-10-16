@@ -13,7 +13,7 @@ const (
 
 // Machine-wide layout constants (not game specific).
 const (
-	DisplayWidth = 106
+	DisplayWidth = 104
 )
 
 // Record file names, stored inside each game's DataDir.

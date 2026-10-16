@@ -1,4 +1,6 @@
-package games
+// Package mathbreakers is the Mathbreakers game definition.
+// Its times_* files and windowrules.lua live in this folder.
+package mathbreakers
 
 import (
 	"os"
@@ -8,6 +10,8 @@ import (
 
 	input "github.com/rsa17826/go-input-lib"
 	"github.com/rsa17826/input-manager/IMan"
+
+	. "speedrun/games"
 )
 
 const mathbreakersWatchDir = "/home/nyix/projects/mathbreakers-ghost-speedrun-mod/mathbreakers"
@@ -26,9 +30,9 @@ func init() {
 	Register(&Game{
 		Name:        "mathbreakers",
 		WindowClass: "mathbreakers.exe",
-		Splits:      []string{"level 1", "level 2", "level 3", "level 4", "level 5"},
+		Splits:      []string{"Segment 1", "Segment 2", "Segment 3", "Segment 4", "Segment 5"},
 
-		DataDir: ".",
+		DataDir: "./data/mathbreakers",
 
 		WatchDir:       mathbreakersWatchDir,
 		LevelDoneFile:  "level_cleared.txt",
