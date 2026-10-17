@@ -4,7 +4,7 @@ python getCookies.py >"$t"
 curl -L -b "$t" "https://docs.google.com/spreadsheets/d/1BKP3F13UTYMQZccQqDsOU-ck1Qi5x8qSucwMfIO5LnE/export?format=csv" -o spreadsheet.csv
 rm "$t"
 CSV_FILE="./spreadsheet.csv"
-OUTPUT_FILE="./wrs"
+OUTPUT_FILE="./data/mathbreakers/wrs"
 
 if [ ! -f "$CSV_FILE" ]; then
   echo "Error: $CSV_FILE not found."
