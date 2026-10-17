@@ -4,4 +4,5 @@ package main
 import (
 	_ "speedrun/games/mathbreakers"
 	_ "speedrun/games/mathquest"
+	_ "speedrun/games/vex"
 )

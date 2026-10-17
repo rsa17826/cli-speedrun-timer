@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+launcher launcherName vex++ version 255 2>&1 | while IFS= read -r line; do
+  if echo "$line" | grep -q 'PLAYER WINS!!!'; then
+    touch ./data/vex/level_cleared.txt
+  fi
+done
