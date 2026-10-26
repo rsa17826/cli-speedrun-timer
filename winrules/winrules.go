@@ -8,7 +8,7 @@ import (
 
 const (
 	// LineHeight is the height in pixels given to each line of timer output.
-	LineHeight   = 20
+	LineHeight   = 18
 	DisplayWidth = 106
 )
 
